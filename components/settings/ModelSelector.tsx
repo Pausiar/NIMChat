@@ -31,7 +31,10 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[360px]">
+      <DropdownMenuContent
+        sideOffset={6}
+        className="w-[360px] max-h-[60vh] overflow-y-auto"
+      >
         {AVAILABLE_MODELS.map((m) => (
           <DropdownMenuItem
             key={m.id}

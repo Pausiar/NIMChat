@@ -110,10 +110,10 @@ export function SettingsModal({
             />
             <ParamSlider
               label="Max tokens"
-              hint="Longitud máxima de la respuesta"
+              hint="Longitud máxima de la respuesta. Sube esto si Design devuelve componentes recortados."
               min={256}
-              max={4096}
-              step={64}
+              max={32768}
+              step={256}
               value={draft.params.maxTokens}
               format={(v) => v.toString()}
               onChange={(v) =>

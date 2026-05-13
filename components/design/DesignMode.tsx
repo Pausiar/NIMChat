@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import * as Babel from "@babel/standalone";
-import { AlertCircle, KeyRound } from "lucide-react";
+import { AlertCircle, KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptPanel } from "./PromptPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -17,7 +17,7 @@ just one self-contained React component starting with export default function Co
 Use realistic placeholder data. Make it visually polished.
 You may use lucide-react icons directly by name without importing them.
 IMPORTANT RULES:
-- Keep the component under 180 lines.
+- Keep the component focused and reasonably sized (under ~320 lines).
 - Do not use Next.js-specific components such as Link or Image.
 - If you need state, use React.useState / React.useMemo / React.useEffect, not imported hooks.
 - Never use inline SVG data URIs inside className or style attributes (no bg-[url('data:image/svg+xml,...')]).
@@ -45,6 +45,9 @@ export function DesignMode({
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeGenerationId, setActiveGenerationId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [liveReasoning, setLiveReasoning] = useState("");
+  const [livePreview, setLivePreview] = useState("");
+  const flushTimerRef = useRef<number | null>(null);
 
   const canRefine = state.currentCode.trim().length > 0;
 
@@ -60,6 +63,8 @@ export function DesignMode({
     }
 
     setError(null);
+    setLiveReasoning("");
+    setLivePreview("");
     onStateChange((current) => ({
       ...current,
       isGenerating: true,
@@ -68,6 +73,15 @@ export function DesignMode({
     setActiveTab("preview");
 
     let rawOutput = "";
+    let reasoningBuffer = "";
+    const scheduleFlush = () => {
+      if (flushTimerRef.current != null) return;
+      flushTimerRef.current = window.setTimeout(() => {
+        flushTimerRef.current = null;
+        setLivePreview(rawOutput.slice(-1200));
+        setLiveReasoning(reasoningBuffer.slice(-1200));
+      }, 80);
+    };
     const userContent =
       mode === "refine" && state.currentCode
         ? `Refina el componente existente según esta petición: ${prompt}\n\nCódigo actual:\n${state.currentCode}`
@@ -77,13 +91,18 @@ export function DesignMode({
       await streamChat({
         apiKey: settings.apiKey,
         model: settings.selectedModel,
-        params: { ...settings.params, maxTokens: Math.max(settings.params.maxTokens, 8192) },
+        params: { ...settings.params, maxTokens: Math.max(settings.params.maxTokens, 16384) },
         messages: [
           { role: "system", content: DESIGN_SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
         onToken: (token) => {
           rawOutput += token;
+          scheduleFlush();
+        },
+        onReasoning: (chunk) => {
+          reasoningBuffer += chunk;
+          scheduleFlush();
         },
       });
 
@@ -113,6 +132,13 @@ export function DesignMode({
         currentCode: mode === "refine" ? previousCode : "",
         isGenerating: false,
       }));
+    } finally {
+      if (flushTimerRef.current != null) {
+        window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      setLivePreview("");
+      setLiveReasoning("");
     }
   };
 
@@ -174,6 +200,29 @@ export function DesignMode({
           </div>
         )}
 
+        {state.isGenerating && (livePreview || liveReasoning) && (
+          <div className="mx-4 mt-4 grid gap-3 lg:grid-cols-2">
+            {liveReasoning && (
+              <div className="flex min-h-[120px] flex-col gap-2 rounded-2xl border border-orange-400/20 bg-orange-500/[0.04] p-3 text-xs text-orange-100/85">
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-orange-300/80">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Razonando
+                </div>
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono leading-relaxed text-orange-100/75">{liveReasoning}</pre>
+              </div>
+            )}
+            {livePreview && (
+              <div className="flex min-h-[120px] flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/80">
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Generando código
+                </div>
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono leading-relaxed text-white/70">{livePreview}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
         <PreviewPanel
           code={state.currentCode}
           onCodeChange={(code) =>
@@ -211,7 +260,9 @@ function assertValidGeneratedCode(code: string): string {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/unterminated string constant|unexpected token/i.test(message)) {
-      throw new Error("El modelo devolvió JSX incompleto o mal formado. Prueba a generar de nuevo.");
+      throw new Error(
+        "El modelo devolvió JSX incompleto o mal formado. Aumenta Max tokens en Ajustes (hasta 32768) y vuelve a intentarlo.",
+      );
     }
     throw new Error("El modelo no devolvió código válido. Prueba a generar de nuevo.");
   }

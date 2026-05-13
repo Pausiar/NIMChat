@@ -1,10 +1,10 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CodeEditor } from "./CodeEditor";
-import { ComponentRenderer } from "./ComponentRenderer";
+import { ComponentRenderer, buildStandaloneHtml } from "./ComponentRenderer";
 import type { DesignBackground, DesignViewport } from "./types";
 
 type Tab = "preview" | "code";
@@ -49,6 +49,25 @@ export function PreviewPanel({
   onRefresh,
   isGenerating,
 }: PreviewPanelProps) {
+  const handleDownloadHtml = () => {
+    if (!code.trim()) return;
+    try {
+      const html = buildStandaloneHtml(code);
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      a.download = `nimchat-design-${stamp}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      // Si el código no es válido todavía, ignorar silenciosamente.
+    }
+  };
+
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-[#0a0a0b] p-4">
       <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
@@ -60,16 +79,31 @@ export function PreviewPanel({
             Code
           </TabButton>
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={onRefresh}
-          className="h-8 w-8 text-white/60 hover:text-white"
-          aria-label="Refrescar preview"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={handleDownloadHtml}
+            disabled={!code.trim() || isGenerating}
+            className="h-8 gap-1.5 rounded-lg px-2 text-xs text-white/70 hover:bg-white/5 hover:text-white"
+            aria-label="Descargar diseño como HTML"
+            title="Descargar como HTML autónomo"
+          >
+            <Download className="h-3.5 w-3.5" />
+            HTML
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={onRefresh}
+            className="h-8 w-8 text-white/60 hover:text-white"
+            aria-label="Refrescar preview"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">

@@ -104,7 +104,12 @@ export function ChatInput({
                 <ChevronDown className="h-3.5 w-3.5 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[320px]">
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-[320px] max-h-[60vh] overflow-y-auto"
+            >
               {AVAILABLE_MODELS.map((m) => (
                 <DropdownMenuItem
                   key={m.id}

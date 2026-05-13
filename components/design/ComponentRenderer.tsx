@@ -359,3 +359,8 @@ function buildSrcDoc(source: string, componentName: string) {
   </body>
 </html>`;
 }
+
+export function buildStandaloneHtml(code: string): string {
+  const { stripped, componentName } = stripExportDefault(code);
+  return buildSrcDoc(stripped, componentName);
+}

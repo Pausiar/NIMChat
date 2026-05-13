@@ -61,7 +61,7 @@ interface NimResponse {
 
 export async function runAgentLoop(options: RunAgentLoopOptions) {
   const client = new NimChatServerClient(options.serverUrl);
-  const maxIterations = options.maxIterations ?? 12;
+  const maxIterations = options.maxIterations ?? 32;
   const projectInfo = await client.getProjectInfo();
   const messages: AgentMessage[] = [
     { role: "system", content: SYSTEM_PROMPT_CODE },
@@ -154,7 +154,7 @@ async function callNimWithTools(opts: {
       model: opts.model,
       messages: opts.messages,
       temperature: Math.min(opts.params.temperature, 0.4),
-      max_tokens: Math.max(opts.params.maxTokens, 4096),
+      max_tokens: Math.max(opts.params.maxTokens, 8192),
       top_p: opts.params.topP,
       stream: false,
       tools: CODE_TOOLS,

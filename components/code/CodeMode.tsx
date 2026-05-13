@@ -36,6 +36,7 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [summary, setSummary] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [pendingTextPrompt, setPendingTextPrompt] = useState<{
     title: string;
@@ -70,6 +71,40 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
   useEffect(() => {
     refreshProject();
   }, [refreshProject]);
+
+  // Restaurar estado del Code Mode (tarea, acciones, summary) por proyecto.
+  useEffect(() => {
+    if (!projectInfo?.path || restored) return;
+    try {
+      const raw = window.localStorage.getItem(`nimchat:code:state:${projectInfo.path}`);
+      if (raw) {
+        const data = JSON.parse(raw) as {
+          task?: string;
+          actions?: AgentAction[];
+          summary?: string;
+        };
+        if (typeof data.task === "string") setTask(data.task);
+        if (Array.isArray(data.actions)) setActions(data.actions);
+        if (typeof data.summary === "string") setSummary(data.summary);
+      }
+    } catch {
+      // Ignorar JSON corrupto.
+    }
+    setRestored(true);
+  }, [projectInfo?.path, restored]);
+
+  // Persistir en cada cambio relevante.
+  useEffect(() => {
+    if (!projectInfo?.path || !restored) return;
+    try {
+      window.localStorage.setItem(
+        `nimchat:code:state:${projectInfo.path}`,
+        JSON.stringify({ task, actions, summary }),
+      );
+    } catch {
+      // Ignorar cuotas.
+    }
+  }, [projectInfo?.path, restored, task, actions, summary]);
 
   useEffect(() => {
     if (!connected) return;
@@ -220,7 +255,6 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
         params: settings.params,
         serverUrl,
         signal: controller.signal,
-        onThought: () => undefined,
         onAction: (action) => setActions((current) => [action, ...current]),
         onComplete: (value) => setSummary(value),
       });
