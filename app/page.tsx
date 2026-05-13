@@ -32,9 +32,21 @@ const DesignMode = lazy(() =>
   }))
 );
 
-const CodeModePlaceholder = lazy(() =>
-  import("@/components/code/CodeModePlaceholder").then((mod) => ({
-    default: mod.CodeModePlaceholder,
+const CodeMode = lazy(() =>
+  import("@/components/code/CodeMode").then((mod) => ({
+    default: mod.CodeMode,
+  }))
+);
+
+const AgentsModePlaceholder = lazy(() =>
+  import("@/components/agents/AgentsModePlaceholder").then((mod) => ({
+    default: mod.AgentsModePlaceholder,
+  }))
+);
+
+const ImageModePlaceholder = lazy(() =>
+  import("@/components/image/ImageModePlaceholder").then((mod) => ({
+    default: mod.ImageModePlaceholder,
   }))
 );
 
@@ -50,7 +62,13 @@ const DEFAULT_DESIGN_STATE: DesignState = {
 };
 
 function isAppMode(value: string | null): value is AppMode {
-  return value === "chat" || value === "design" || value === "code";
+  return (
+    value === "chat" ||
+    value === "design" ||
+    value === "code" ||
+    value === "agents" ||
+    value === "image"
+  );
 }
 
 export default function HomePage() {
@@ -430,7 +448,23 @@ export default function HomePage() {
       {activeMode === "code" && (
         <main className="min-w-0 flex-1">
           <Suspense fallback={<ModeFallback label="Cargando Code Mode..." />}>
-            <CodeModePlaceholder />
+            <CodeMode settings={settings} onOpenSettings={() => setSettingsOpen(true)} />
+          </Suspense>
+        </main>
+      )}
+
+      {activeMode === "agents" && (
+        <main className="min-w-0 flex-1">
+          <Suspense fallback={<ModeFallback label="Cargando Agents..." />}>
+            <AgentsModePlaceholder onBack={() => handleModeChange("chat")} />
+          </Suspense>
+        </main>
+      )}
+
+      {activeMode === "image" && (
+        <main className="min-w-0 flex-1">
+          <Suspense fallback={<ModeFallback label="Cargando Image..." />}>
+            <ImageModePlaceholder onBack={() => handleModeChange("chat")} />
           </Suspense>
         </main>
       )}

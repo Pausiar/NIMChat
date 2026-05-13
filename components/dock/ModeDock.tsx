@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { Brush, MessageCircle, Terminal } from "lucide-react";
+import { Bot, Brush, ImageIcon, MessageCircle, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AppMode = "chat" | "design" | "code";
+export type AppMode = "chat" | "design" | "code" | "agents" | "image";
 
 interface DockItem {
   id: AppMode;
@@ -22,21 +22,36 @@ const dockItems: DockItem[] = [
     name: "Chat",
     description: "Conversación NIM",
     icon: <MessageCircle className="h-5 w-5" />,
-    color: "bg-gradient-to-br from-emerald-400 to-cyan-500",
+    color: "bg-gradient-to-br from-nim-yellow to-amber-600",
   },
   {
     id: "design",
     name: "Design",
     description: "UI con preview",
     icon: <Brush className="h-5 w-5" />,
-    color: "bg-gradient-to-br from-orange-400 to-rose-500",
+    color: "bg-gradient-to-br from-amber-300 to-yellow-600",
   },
   {
     id: "code",
     name: "Code",
-    description: "Próximamente",
+    description: "Agente local",
     icon: <Terminal className="h-5 w-5" />,
-    color: "bg-gradient-to-br from-zinc-500 to-zinc-800",
+    color: "bg-gradient-to-br from-zinc-800 to-black ring-1 ring-nim-yellow/40",
+  },
+  {
+    id: "agents",
+    name: "Agents",
+    description: "Próximamente",
+    icon: <Bot className="h-5 w-5" />,
+    color: "bg-gradient-to-br from-zinc-700 to-zinc-900",
+    disabled: true,
+  },
+  {
+    id: "image",
+    name: "Image",
+    description: "Próximamente",
+    icon: <ImageIcon className="h-5 w-5" />,
+    color: "bg-gradient-to-br from-zinc-700 to-zinc-900",
     disabled: true,
   },
 ];
@@ -54,7 +69,7 @@ export function ModeDock({ activeMode, onModeChange }: ModeDockProps) {
       <motion.div
         onMouseMove={(event) => mouseX.set(event.pageX)}
         onMouseLeave={() => mouseX.set(Infinity)}
-        className="pointer-events-auto flex h-[76px] items-end gap-3 rounded-3xl border border-white/15 bg-zinc-950/70 px-3 pb-3 shadow-2xl shadow-black/40 backdrop-blur-xl"
+        className="pointer-events-auto flex h-[76px] items-end gap-3 rounded-3xl border border-nim-yellow/20 bg-black/80 px-3 pb-3 shadow-2xl shadow-black/60 backdrop-blur-xl"
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
@@ -65,7 +80,10 @@ export function ModeDock({ activeMode, onModeChange }: ModeDockProps) {
             item={item}
             active={item.id === activeMode}
             mouseX={mouseX}
-            onSelect={() => onModeChange(item.id)}
+            onSelect={() => {
+              if (item.disabled) return;
+              onModeChange(item.id);
+            }}
           />
         ))}
       </motion.div>
@@ -105,23 +123,24 @@ function DockIcon({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative flex aspect-square items-center justify-center rounded-2xl text-white outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-white/60",
-        item.disabled && "opacity-75"
+        "group relative flex aspect-square items-center justify-center rounded-2xl text-black outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-nim-yellow",
+        item.disabled && "cursor-not-allowed opacity-60"
       )}
       whileTap={{ scale: item.disabled ? 1 : 0.95 }}
       aria-label={`Cambiar a modo ${item.name}`}
       aria-pressed={active}
+      aria-disabled={item.disabled}
     >
       <motion.span
         className={cn(
           "relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl shadow-lg",
           item.color,
-          active && "ring-2 ring-white/70"
+          active && "ring-2 ring-nim-yellow"
         )}
-        animate={{ y: isHovered ? -7 : 0 }}
+        animate={{ y: isHovered && !item.disabled ? -7 : 0 }}
         transition={{ type: "spring", stiffness: 420, damping: 20 }}
       >
-        <motion.span animate={{ scale: isHovered ? 1.12 : 1 }}>
+        <motion.span animate={{ scale: isHovered && !item.disabled ? 1.12 : 1 }}>
           {item.icon}
         </motion.span>
         <span className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/25 to-transparent opacity-30" />
@@ -129,22 +148,26 @@ function DockIcon({
 
       <motion.span
         initial={{ opacity: 0, y: 8, scale: 0.88 }}
-        animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? -16 : 8, scale: isHovered ? 1 : 0.88 }}
-        className="pointer-events-none absolute -top-12 left-1/2 min-w-max -translate-x-1/2 rounded-lg border border-white/10 bg-zinc-900/95 px-2.5 py-1.5 text-center text-xs shadow-xl backdrop-blur"
+        animate={{
+          opacity: isHovered ? 1 : 0,
+          y: isHovered ? -16 : 8,
+          scale: isHovered ? 1 : 0.88,
+        }}
+        className="pointer-events-none absolute -top-12 left-1/2 min-w-max -translate-x-1/2 rounded-lg border border-nim-yellow/20 bg-zinc-950/95 px-2.5 py-1.5 text-center text-xs text-white shadow-xl backdrop-blur"
       >
         <span className="block font-medium">{item.name}</span>
         <span className="block text-[10px] text-white/50">{item.description}</span>
       </motion.span>
 
       {item.disabled && (
-        <span className="absolute -right-2 -top-2 rounded-full border border-white/10 bg-black px-1.5 py-0.5 text-[9px] font-medium text-white/70">
+        <span className="absolute -right-2 -top-2 rounded-full border border-nim-yellow/30 bg-black px-1.5 py-0.5 text-[9px] font-medium text-nim-yellow">
           Soon
         </span>
       )}
       <span
         className={cn(
-          "absolute -bottom-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-white transition-opacity",
-          active ? "opacity-90" : "opacity-0"
+          "absolute -bottom-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-nim-yellow transition-opacity",
+          active ? "opacity-100" : "opacity-0"
         )}
       />
     </motion.button>

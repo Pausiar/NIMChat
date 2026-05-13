@@ -16,6 +16,22 @@ const config: Config = {
     },
     extend: {
       colors: {
+        "nim-yellow": "#facc15",
+        "nim-yellow-dark": "#ca8a04",
+        "nim-black": "#0a0a0b",
+        nim: {
+          yellow: "#facc15",
+          "yellow-50": "#fefce8",
+          "yellow-100": "#fef9c3",
+          "yellow-300": "#fde047",
+          "yellow-400": "#facc15",
+          "yellow-500": "#eab308",
+          "yellow-600": "#ca8a04",
+          "yellow-700": "#a16207",
+          black: "#0a0a0b",
+          panel: "#111113",
+          border: "#1f1f23",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -10,19 +10,19 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 6% 6%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 6% 10%;
-    --secondary: 240 4% 16%;
+    --primary: 48 96% 53%;
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 4% 14%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
+    --muted: 240 4% 14%;
     --muted-foreground: 240 5% 65%;
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 48 96% 53%;
+    --accent-foreground: 240 10% 4%;
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 240 5% 84%;
+    --border: 48 30% 18%;
+    --input: 240 4% 14%;
+    --ring: 48 96% 53%;
     --radius: 0.5rem;
   }
 }
@@ -58,11 +58,11 @@ samp {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(250, 204, 21, 0.18);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(250, 204, 21, 0.32);
 }
 
 .lab-bg::before {
@@ -71,8 +71,8 @@ samp {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(800px circle at 0% 0%, rgba(56, 189, 248, 0.08), transparent 50%),
-    radial-gradient(600px circle at 100% 100%, rgba(168, 85, 247, 0.08), transparent 50%);
+    radial-gradient(800px circle at 0% 0%, rgba(250, 204, 21, 0.08), transparent 50%),
+    radial-gradient(600px circle at 100% 100%, rgba(202, 138, 4, 0.10), transparent 50%);
   pointer-events: none;
   box-sizing: border-box;
 }

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "server": "tsx server/index.ts",
+    "nimchat-server": "tsx server/index.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -14,8 +16,12 @@
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-slider": "^1.2.1",
     "@radix-ui/react-slot": "^1.1.0",
+    "@types/express": "^5.0.6",
+    "@types/ws": "^8.18.1",
+    "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "express": "^5.2.1",
     "framer-motion": "^11.11.0",
     "lucide-react": "^0.460.0",
     "next": "^15.1.0",
@@ -24,8 +30,14 @@
     "react-markdown": "^9.0.1",
     "react-syntax-highlighter": "^15.6.1",
     "remark-gfm": "^4.0.0",
+    "shiki": "^4.0.2",
+    "simple-git": "^3.36.0",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.21.0",
+    "ws": "^8.20.1",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@types/babel__standalone": "^7.1.9",
