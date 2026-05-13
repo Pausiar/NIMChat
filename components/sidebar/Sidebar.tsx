@@ -1,11 +1,12 @@
 "use client";
 
-import { Settings, Sparkles, X } from "lucide-react";
+import { Settings, X } from "lucide-react";
 import { Chat } from "@/lib/chat-storage";
 import { NewChatButton } from "./NewChatButton";
 import { ChatList } from "./ChatList";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NimLogo } from "@/components/brand/NimLogo";
 
 interface SidebarProps {
   chats: Chat[];
@@ -47,9 +48,10 @@ export function Sidebar({
       >
         <div className="flex items-center justify-between border-b border-white/5 px-3 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 to-cyan-500">
-              <Sparkles className="h-4 w-4 text-black" />
-            </div>
+            <NimLogo
+              size={32}
+              className="h-8 w-8 drop-shadow-[0_0_12px_rgba(250,204,21,0.22)]"
+            />
             <span className="text-sm font-semibold text-white">NimChat</span>
           </div>
           <button

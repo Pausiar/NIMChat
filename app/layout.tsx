@@ -6,7 +6,9 @@ export const metadata: Metadata = {
   description:
     "Interfaz unificada y gratuita para los mejores modelos open-source mediante NVIDIA NIM.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/NIMChat-noBG.png",
+    shortcut: "/NIMChat-noBG.png",
+    apple: "/NIMChat-noBG.png",
   },
 };
 

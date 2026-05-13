@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { SettingsModal } from "@/components/settings/SettingsModal";
+import { NimLogo } from "@/components/brand/NimLogo";
 import { ModeDock, type AppMode } from "@/components/dock/ModeDock";
 import { Button } from "@/components/ui/button";
 import {
@@ -335,6 +336,10 @@ export default function HomePage() {
                 >
                   <Menu className="h-5 w-5" />
                 </button>
+                <NimLogo
+                  size={24}
+                  className="h-6 w-6 drop-shadow-[0_0_10px_rgba(250,204,21,0.2)]"
+                />
                 <div className="text-sm">
                   <div className="font-medium text-white">
                     {activeChat?.title ?? "NimChat"}
