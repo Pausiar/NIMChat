@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Menu, KeyRound, Settings as SettingsIcon } from "lucide-react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { SettingsModal } from "@/components/settings/SettingsModal";
+import { ModeDock, type AppMode } from "@/components/dock/ModeDock";
 import { Button } from "@/components/ui/button";
 import {
   AppSettings,
@@ -23,12 +24,42 @@ import {
 import { streamChat } from "@/lib/nvidia-nim";
 import { getModel, DEFAULT_MODEL_ID } from "@/lib/models";
 import { truncateTitle } from "@/lib/utils";
+import type { DesignState } from "@/components/design/types";
+
+const DesignMode = lazy(() =>
+  import("@/components/design/DesignMode").then((mod) => ({
+    default: mod.DesignMode,
+  }))
+);
+
+const CodeModePlaceholder = lazy(() =>
+  import("@/components/code/CodeModePlaceholder").then((mod) => ({
+    default: mod.CodeModePlaceholder,
+  }))
+);
+
+const ACTIVE_MODE_KEY = "nimchat:active-mode";
+
+const DEFAULT_DESIGN_STATE: DesignState = {
+  currentCode: "",
+  currentPrompt: "",
+  history: [],
+  isGenerating: false,
+  selectedBackground: "gray",
+  selectedViewport: "desktop",
+};
+
+function isAppMode(value: string | null): value is AppMode {
+  return value === "chat" || value === "design" || value === "code";
+}
 
 export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
+  const [activeMode, setActiveMode] = useState<AppMode>("chat");
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [designState, setDesignState] = useState<DesignState>(DEFAULT_DESIGN_STATE);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -44,8 +75,10 @@ export default function HomePage() {
     const loadedSettings = loadSettings();
     const loadedChats = loadChats();
     const loadedActive = loadActiveChatId();
+    const loadedMode = window.localStorage.getItem(ACTIVE_MODE_KEY);
     setSettings(loadedSettings);
     setChats(loadedChats);
+    if (isAppMode(loadedMode)) setActiveMode(loadedMode);
     setActiveId(
       loadedActive && loadedChats.find((c) => c.id === loadedActive)
         ? loadedActive
@@ -64,6 +97,9 @@ export default function HomePage() {
   useEffect(() => {
     if (hydrated) saveSettings(settings);
   }, [settings, hydrated]);
+  useEffect(() => {
+    if (hydrated) window.localStorage.setItem(ACTIVE_MODE_KEY, activeMode);
+  }, [activeMode, hydrated]);
 
   const activeChat = useMemo(
     () => chats.find((c) => c.id === activeId) ?? null,
@@ -249,126 +285,157 @@ export default function HomePage() {
     );
   }
 
+  const handleModeChange = (mode: AppMode) => {
+    setActiveMode(mode);
+    setSidebarOpen(false);
+  };
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-[#0a0a0b]">
-      <Sidebar
-        chats={chats}
-        activeChatId={activeId}
-        onNewChat={handleNewChat}
-        onSelect={(id) => setActiveId(id)}
-        onRename={handleRename}
-        onDelete={handleDelete}
-        onOpenSettings={() => setSettingsOpen(true)}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {activeMode === "chat" && (
+        <>
+          <Sidebar
+            chats={chats}
+            activeChatId={activeId}
+            onNewChat={handleNewChat}
+            onSelect={(id) => setActiveId(id)}
+            onRename={handleRename}
+            onDelete={handleDelete}
+            onOpenSettings={() => setSettingsOpen(true)}
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          />
 
-      <main className="lab-bg relative flex min-w-0 flex-1 flex-col">
-        {/* Header */}
-        <header className="z-10 flex items-center justify-between border-b border-white/5 bg-[#0a0a0b]/80 px-3 py-2 backdrop-blur md:px-6">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="rounded p-1.5 text-white/70 hover:bg-white/5 md:hidden"
-              aria-label="Abrir sidebar"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="text-sm">
-              <div className="font-medium text-white">
-                {activeChat?.title ?? "NimChat"}
+          <main className="lab-bg relative flex min-w-0 flex-1 flex-col pb-24">
+            <header className="z-10 flex items-center justify-between border-b border-white/5 bg-[#0a0a0b]/80 px-3 py-2 backdrop-blur md:px-6">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="rounded p-1.5 text-white/70 hover:bg-white/5 md:hidden"
+                  aria-label="Abrir sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div className="text-sm">
+                  <div className="font-medium text-white">
+                    {activeChat?.title ?? "NimChat"}
+                  </div>
+                  <div className="text-xs text-white/40">
+                    {modelInfo.provider} · {modelInfo.name}
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-white/40">
-                {modelInfo.provider} · {modelInfo.name}
+              <div className="flex items-center gap-1">
+                {!settings.apiKey && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSettingsOpen(true)}
+                    className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Configurar API key
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setSettingsOpen(true)}
+                  className="text-white/60 hover:text-white"
+                  aria-label="Ajustes"
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
+            </header>
+
             {!settings.apiKey && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSettingsOpen(true)}
-                className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
-              >
-                <KeyRound className="h-3.5 w-3.5" />
-                Configurar API key
-              </Button>
+              <div className="z-10 mx-auto mt-3 w-full max-w-3xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100">
+                Necesitas una API key gratuita de NVIDIA NIM para empezar.{" "}
+                <a
+                  href="https://build.nvidia.com"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline underline-offset-2 hover:text-white"
+                >
+                  Consíguela aquí
+                </a>{" "}
+                y pégala en{" "}
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                  className="underline underline-offset-2 hover:text-white"
+                >
+                  Ajustes
+                </button>
+                .
+              </div>
             )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setSettingsOpen(true)}
-              className="text-white/60 hover:text-white"
-              aria-label="Ajustes"
-            >
-              <SettingsIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        </header>
 
-        {/* API key banner */}
-        {!settings.apiKey && (
-          <div className="z-10 mx-auto mt-3 w-full max-w-3xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100">
-            Necesitas una API key gratuita de NVIDIA NIM para empezar.{" "}
-            <a
-              href="https://build.nvidia.com"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="underline underline-offset-2 hover:text-white"
-            >
-              Consíguela aquí
-            </a>{" "}
-            y pégala en{" "}
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              className="underline underline-offset-2 hover:text-white"
-            >
-              Ajustes
-            </button>
-            .
-          </div>
-        )}
+            {error && (
+              <div className="z-10 mx-auto mt-3 flex w-full max-w-3xl items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="flex-1">{error}</div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="text-red-300/70 hover:text-white"
+                  aria-label="Cerrar error"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
-        {/* Error toast */}
-        {error && (
-          <div className="z-10 mx-auto mt-3 flex w-full max-w-3xl items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="flex-1">{error}</div>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="text-red-300/70 hover:text-white"
-              aria-label="Cerrar error"
-            >
-              ×
-            </button>
-          </div>
-        )}
+            <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
+              <ChatWindow
+                messages={activeChat?.messages ?? []}
+                isStreaming={isStreaming}
+                streamingMessageId={streamingMessageId}
+              />
+            </div>
 
-        {/* Chat area */}
-        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
-          <ChatWindow
-            messages={activeChat?.messages ?? []}
-            isStreaming={isStreaming}
-            streamingMessageId={streamingMessageId}
-          />
-        </div>
+            <div className="relative z-10">
+              <ChatInput
+                value={input}
+                onChange={setInput}
+                onSend={handleSend}
+                onStop={handleStop}
+                isStreaming={isStreaming}
+                selectedModel={currentModel}
+                onModelChange={handleModelChange}
+              />
+            </div>
+          </main>
+        </>
+      )}
 
-        <div className="relative z-10">
-          <ChatInput
-            value={input}
-            onChange={setInput}
-            onSend={handleSend}
-            onStop={handleStop}
-            isStreaming={isStreaming}
-            selectedModel={currentModel}
-            onModelChange={handleModelChange}
-          />
-        </div>
-      </main>
+      {activeMode === "design" && (
+        <main className="min-w-0 flex-1">
+          <Suspense fallback={<ModeFallback label="Cargando Design Mode..." />}>
+            <DesignMode
+              state={designState}
+              onStateChange={setDesignState}
+              settings={settings}
+              onModelChange={(id) =>
+                setSettings((current) => ({ ...current, selectedModel: id }))
+              }
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+          </Suspense>
+        </main>
+      )}
+
+      {activeMode === "code" && (
+        <main className="min-w-0 flex-1">
+          <Suspense fallback={<ModeFallback label="Cargando Code Mode..." />}>
+            <CodeModePlaceholder />
+          </Suspense>
+        </main>
+      )}
+
+      <ModeDock activeMode={activeMode} onModeChange={handleModeChange} />
 
       <SettingsModal
         open={settingsOpen}
@@ -376,6 +443,14 @@ export default function HomePage() {
         settings={settings}
         onSave={setSettings}
       />
+    </div>
+  );
+}
+
+function ModeFallback({ label }: { label: string }) {
+  return (
+    <div className="flex h-full items-center justify-center bg-[#0a0a0b] pb-24 text-sm text-white/45">
+      {label}
     </div>
   );
 }

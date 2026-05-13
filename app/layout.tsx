@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "NimChat — Open-source LLMs via NVIDIA NIM",
   description:
     "Interfaz unificada y gratuita para los mejores modelos open-source mediante NVIDIA NIM.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

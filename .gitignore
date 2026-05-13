@@ -2,6 +2,7 @@ node_modules
 .next
 out
 dist
+.dist
 build
 .env
 .env.local
@@ -9,3 +10,4 @@ build
 *.log
 .vercel
 next-env.d.ts
+open-design
