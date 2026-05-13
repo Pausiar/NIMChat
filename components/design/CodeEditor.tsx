@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as Babel from "@babel/standalone";
 import { Check, Copy, Download, Edit3, Lock } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -16,14 +17,36 @@ export function CodeEditor({ code, onCodeChange }: CodeEditorProps) {
   const [editable, setEditable] = useState(false);
   const [draft, setDraft] = useState(code);
   const [copied, setCopied] = useState(false);
+  const [syntaxError, setSyntaxError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(code);
+    setSyntaxError(null);
   }, [code]);
 
   useEffect(() => {
     if (!editable || draft === code) return;
-    const timer = window.setTimeout(() => onCodeChange(draft), 500);
+    const timer = window.setTimeout(() => {
+      if (!draft.trim()) {
+        setSyntaxError(null);
+        onCodeChange("");
+        return;
+      }
+
+      try {
+        Babel.transform(draft, {
+          filename: "GeneratedComponent.tsx",
+          presets: [
+            ["typescript", { isTSX: true, allExtensions: true }],
+            ["react", { runtime: "classic" }],
+          ],
+        });
+        setSyntaxError(null);
+        onCodeChange(draft);
+      } catch {
+        setSyntaxError("El código tiene errores de sintaxis y no se aplicó al preview.");
+      }
+    }, 500);
     return () => window.clearTimeout(timer);
   }, [draft, editable, code, onCodeChange]);
 
@@ -90,6 +113,12 @@ export function CodeEditor({ code, onCodeChange }: CodeEditorProps) {
           </Button>
         </div>
       </div>
+
+      {syntaxError && editable && (
+        <div className="border-b border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          {syntaxError}
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-auto">
         {editable ? (

@@ -50,8 +50,8 @@ export function PreviewPanel({
   isGenerating,
 }: PreviewPanelProps) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-[#0a0a0b] p-4 lg:w-[60%]">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+    <section className="flex min-h-0 flex-1 flex-col bg-[#0a0a0b] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
         <div className="flex rounded-xl border border-white/10 bg-black/30 p-1">
           <TabButton active={activeTab === "preview"} onClick={() => onTabChange("preview")}>
             Preview
@@ -60,9 +60,35 @@ export function PreviewPanel({
             Code
           </TabButton>
         </div>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={onRefresh}
+          className="h-8 w-8 text-white/60 hover:text-white"
+          aria-label="Refrescar preview"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1 md:flex">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {activeTab === "preview" ? (
+          <ComponentRenderer
+            code={code}
+            background={background}
+            viewport={viewport}
+            refreshKey={refreshKey}
+            isGenerating={isGenerating}
+          />
+        ) : (
+          <CodeEditor code={code} onCodeChange={onCodeChange} />
+        )}
+      </div>
+
+      {activeTab === "preview" && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1">
             {backgrounds.map((item) => (
               <SmallButton
                 key={item.id}
@@ -84,32 +110,8 @@ export function PreviewPanel({
               </SmallButton>
             ))}
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={onRefresh}
-            className="h-8 w-8 text-white/60 hover:text-white"
-            aria-label="Refrescar preview"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === "preview" ? (
-          <ComponentRenderer
-            code={code}
-            background={background}
-            viewport={viewport}
-            refreshKey={refreshKey}
-            isGenerating={isGenerating}
-          />
-        ) : (
-          <CodeEditor code={code} onCodeChange={onCodeChange} />
-        )}
-      </div>
+      )}
     </section>
   );
 }
