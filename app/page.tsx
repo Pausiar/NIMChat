@@ -24,6 +24,7 @@ import {
 } from "@/lib/chat-storage";
 import { streamChat } from "@/lib/nvidia-nim";
 import { getModel, DEFAULT_MODEL_ID } from "@/lib/models";
+import { resolveMaxTokens } from "@/lib/token-policy";
 import { truncateTitle } from "@/lib/utils";
 import type { DesignState } from "@/components/design/types";
 
@@ -237,7 +238,14 @@ export default function HomePage() {
         apiKey: settings.apiKey,
         model: chat.model,
         messages: payloadMessages,
-        params: settings.params,
+        params: {
+          ...settings.params,
+          maxTokens: resolveMaxTokens({
+            settings,
+            model: chat.model,
+            mode: "chat",
+          }),
+        },
         signal: controller.signal,
         onToken: (tok) => {
           acc += tok;

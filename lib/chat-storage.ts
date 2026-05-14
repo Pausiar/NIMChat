@@ -17,6 +17,8 @@ export interface GenerationParams {
   topP: number;
 }
 
+export type MaxTokensMode = "auto" | "manual";
+
 export interface Chat {
   id: string;
   title: string;
@@ -31,6 +33,7 @@ export interface AppSettings {
   apiKey: string;
   globalSystemPrompt: string;
   params: GenerationParams;
+  maxTokensMode: MaxTokensMode;
   selectedModel: string;
   theme: "dark" | "light";
 }
@@ -46,6 +49,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   apiKey: "",
   globalSystemPrompt: DEFAULT_SYSTEM_PROMPT,
   params: { temperature: 0.7, maxTokens: 1024, topP: 0.9 },
+  maxTokensMode: "auto",
   selectedModel: DEFAULT_MODEL_ID,
   theme: "dark",
 };
@@ -75,7 +79,17 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<AppSettings> & {
+      params?: Partial<GenerationParams>;
+    };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      params: {
+        ...DEFAULT_SETTINGS.params,
+        ...(parsed.params ?? {}),
+      },
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }

@@ -9,6 +9,7 @@ import { PreviewPanel } from "./PreviewPanel";
 import { streamChat } from "@/lib/nvidia-nim";
 import { uid } from "@/lib/utils";
 import type { AppSettings } from "@/lib/chat-storage";
+import { resolveMaxTokens } from "@/lib/token-policy";
 import type { DesignGeneration, DesignState } from "./types";
 
 const DESIGN_SYSTEM_PROMPT = `You are an expert UI/UX engineer. Generate clean, modern React components using Tailwind CSS.
@@ -91,7 +92,10 @@ export function DesignMode({
       await streamChat({
         apiKey: settings.apiKey,
         model: settings.selectedModel,
-        params: { ...settings.params, maxTokens: Math.max(settings.params.maxTokens, 16384) },
+        params: {
+          ...settings.params,
+          maxTokens: resolveMaxTokens({ settings, mode: "design" }),
+        },
         messages: [
           { role: "system", content: DESIGN_SYSTEM_PROMPT },
           { role: "user", content: userContent },

@@ -8,6 +8,7 @@ import { NimChatServerClient, DEFAULT_LOCAL_SERVER_URL, type FileEntry, type Pro
 import { runAgentLoop } from "@/lib/agent-loop";
 import type { AgentAction } from "@/lib/tools";
 import { getModel } from "@/lib/models";
+import { resolveMaxTokens } from "@/lib/token-policy";
 import { FileExplorer } from "./FileExplorer";
 import { CodeEditor, type CodeCenterTab } from "./CodeEditor";
 import { AgentPanel } from "./AgentPanel";
@@ -252,7 +253,10 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
         task,
         apiKey: settings.apiKey,
         model: settings.selectedModel,
-        params: settings.params,
+        params: {
+          ...settings.params,
+          maxTokens: resolveMaxTokens({ settings, mode: "code" }),
+        },
         serverUrl,
         signal: controller.signal,
         onAction: (action) => setActions((current) => [action, ...current]),

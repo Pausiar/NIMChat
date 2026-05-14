@@ -154,7 +154,7 @@ async function callNimWithTools(opts: {
       model: opts.model,
       messages: opts.messages,
       temperature: Math.min(opts.params.temperature, 0.4),
-      max_tokens: Math.max(opts.params.maxTokens, 8192),
+      max_tokens: opts.params.maxTokens,
       top_p: opts.params.topP,
       stream: false,
       tools: CODE_TOOLS,
