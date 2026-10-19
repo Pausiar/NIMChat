@@ -113,6 +113,55 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
 
 export const DEFAULT_MODEL_ID = "meta/llama-3.3-70b-instruct";
 
+/** Modelo recibido de `/v1/models` de NVIDIA NIM (solo los campos que usamos). */
+export interface RemoteModel {
+  id: string;
+  owned_by?: string;
+}
+
+// Ids que NIM expone pero no sirven para chat (embeddings, rerankers, imagen…).
+const NON_CHAT_PATTERN =
+  /embed|rerank|reward|guard|nemoretriever|clip|whisper|tts|asr|stable-diffusion|sdxl|flux|parse|ocr/i;
+
+/** Información mínima para un modelo que no está en el catálogo curado. */
+export function deriveModelInfo(id: string): ModelInfo {
+  const [owner, ...rest] = id.split("/");
+  const slug = rest.length > 0 ? rest.join("/") : owner;
+  const name = slug
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return {
+    id,
+    name,
+    provider: rest.length > 0 ? owner : "NVIDIA NIM",
+    size: "N/D",
+    capabilities: [],
+    description: "Modelo disponible en NVIDIA NIM. Sin ficha curada todavía.",
+  };
+}
+
 export function getModel(id: string): ModelInfo {
-  return AVAILABLE_MODELS.find((m) => m.id === id) ?? AVAILABLE_MODELS[0];
+  return AVAILABLE_MODELS.find((m) => m.id === id) ?? deriveModelInfo(id);
+}
+
+/**
+ * Combina el catálogo remoto con las fichas curadas: primero los modelos
+ * curados (en su orden), después el resto por nombre. Si no hay lista remota,
+ * devuelve el catálogo local.
+ */
+export function mergeRemoteModels(remote: RemoteModel[]): ModelInfo[] {
+  const chatIds = remote
+    .map((m) => m.id)
+    .filter((id) => !NON_CHAT_PATTERN.test(id));
+  if (chatIds.length === 0) return AVAILABLE_MODELS;
+
+  const remoteSet = new Set(chatIds);
+  const curated = AVAILABLE_MODELS.filter((m) => remoteSet.has(m.id));
+  const curatedIds = new Set(curated.map((m) => m.id));
+  const extra = chatIds
+    .filter((id) => !curatedIds.has(id))
+    .sort()
+    .map(deriveModelInfo);
+
+  return [...curated, ...extra];
 }

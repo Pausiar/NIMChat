@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AVAILABLE_MODELS, getModel } from "@/lib/models";
+import { getModel } from "@/lib/models";
+import { useModelCatalog } from "@/lib/use-model-catalog";
 
 interface ChatInputProps {
   value: string;
@@ -70,6 +71,7 @@ export function ChatInput({
   };
 
   const model = getModel(selectedModel);
+  const { models } = useModelCatalog();
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-6">
@@ -110,7 +112,7 @@ export function ChatInput({
               sideOffset={8}
               className="w-[320px] max-h-[60vh] overflow-y-auto"
             >
-              {AVAILABLE_MODELS.map((m) => (
+              {models.map((m) => (
                 <DropdownMenuItem
                   key={m.id}
                   onSelect={() => onModelChange(m.id)}
