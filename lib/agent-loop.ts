@@ -1,6 +1,20 @@
 import type { GenerationParams } from "./chat-storage";
 import { CODE_TOOLS, executeAgentTool, type AgentAction, type ToolCall } from "./tools";
 import { NimChatServerClient } from "./server-client";
+import {
+  DELEGATE_TOOLS,
+  MAX_PARALLEL_SUBAGENTS,
+  MAX_SUBAGENTS_PER_RUN,
+  MESSAGE_TOOLS,
+  Mailbox,
+  ORCHESTRATOR_NAME,
+  SUBAGENT_MAX_ITERATIONS,
+  buildOrchestratorPrompt,
+  buildSubagentPrompt,
+  type AgentInfo,
+  type AgentMessageEvent,
+} from "./agents";
+import type { ModelInfo } from "./models";
 
 export const SYSTEM_PROMPT_CODE = `You are an expert software engineer with full access to the user's local filesystem and terminal through tools.
 You work autonomously to complete programming tasks.
@@ -40,6 +54,12 @@ interface RunAgentLoopOptions {
   onAction: (action: AgentAction) => void;
   onThought?: (content: string) => void;
   onComplete?: (summary: string) => void;
+  /** Si se define, el agente actúa como orquestador y puede delegar. */
+  agents?: {
+    models: ModelInfo[];
+    onAgentUpdate: (agent: AgentInfo) => void;
+    onAgentMessage: (message: AgentMessageEvent) => void;
+  };
 }
 
 interface NimToolCall {
@@ -59,35 +79,195 @@ interface NimResponse {
   }>;
 }
 
+type SpecialHandler = (call: ToolCall) => Promise<unknown>;
+
+interface LoopParams {
+  client: NimChatServerClient;
+  agentName?: string;
+  systemPrompt: string;
+  userContent: string;
+  tools: readonly unknown[];
+  apiKey: string;
+  model: string;
+  params: GenerationParams;
+  maxIterations: number;
+  signal?: AbortSignal;
+  mailbox?: Mailbox;
+  specialTools?: Record<string, SpecialHandler>;
+  onAction: (action: AgentAction) => void;
+  onThought?: (content: string) => void;
+}
+
 export async function runAgentLoop(options: RunAgentLoopOptions) {
   const client = new NimChatServerClient(options.serverUrl);
-  const maxIterations = options.maxIterations ?? 32;
   const projectInfo = await client.getProjectInfo();
-  const messages: AgentMessage[] = [
-    { role: "system", content: SYSTEM_PROMPT_CODE },
-    {
-      role: "user",
-      content: `Project: ${projectInfo.name}\nRoot: ${projectInfo.path}\nBranch: ${projectInfo.branch ?? "sin git"}\nTask: ${options.task}`,
-    },
-  ];
+  const userContent = `Project: ${projectInfo.name}\nRoot: ${projectInfo.path}\nBranch: ${projectInfo.branch ?? "sin git"}\nTask: ${options.task}`;
+  const common = {
+    client,
+    apiKey: options.apiKey,
+    model: options.model,
+    params: options.params,
+    signal: options.signal,
+    onAction: options.onAction,
+    onThought: options.onThought,
+  };
 
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    if (options.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
+  let result: { summary: string; iterations: number };
+  if (options.agents) {
+    result = await runOrchestrated(common, userContent, options.agents, options.maxIterations ?? 32);
+  } else {
+    result = await runLoop({
+      ...common,
+      systemPrompt: SYSTEM_PROMPT_CODE,
+      userContent,
+      tools: CODE_TOOLS,
+      maxIterations: options.maxIterations ?? 32,
+    });
+  }
+  options.onComplete?.(result.summary);
+  return result;
+}
+
+type CommonParams = Pick<
+  LoopParams,
+  "client" | "apiKey" | "model" | "params" | "signal" | "onAction" | "onThought"
+>;
+
+async function runOrchestrated(
+  common: CommonParams,
+  userContent: string,
+  agents: NonNullable<RunAgentLoopOptions["agents"]>,
+  maxIterations: number
+) {
+  const mailbox = new Mailbox();
+  mailbox.register(ORCHESTRATOR_NAME);
+  const knownModels = new Set(agents.models.map((m) => m.id));
+  let spawned = 0;
+  let running = 0;
+
+  const delegate: SpecialHandler = async (call) => {
+    const args = call.arguments;
+    const name = String(args.name ?? "").trim().replace(/\s+/g, "-").slice(0, 32);
+    const task = String(args.task ?? "").trim();
+    const role = String(args.role ?? "").trim();
+    if (!name || !task) return { error: "delegate_task requiere name y task." };
+    if (mailbox.names().includes(name)) return { error: `Ya existe un agente llamado ${name}.` };
+    if (spawned >= MAX_SUBAGENTS_PER_RUN) return { error: "Límite de subagentes alcanzado." };
+    if (running >= MAX_PARALLEL_SUBAGENTS) return { error: "Demasiados subagentes en paralelo; espera a que acaben." };
+
+    const requested = typeof args.model === "string" ? args.model : "";
+    const model = requested && knownModels.has(requested) ? requested : common.model;
+    const peers = mailbox.names().filter((n) => n !== ORCHESTRATOR_NAME);
+    mailbox.register(name);
+    spawned++;
+    running++;
+
+    const info: AgentInfo = {
+      name, role, model, task, status: "running", startedAt: Date.now(), actionCount: 0,
+    };
+    agents.onAgentUpdate({ ...info });
+
+    try {
+      const out = await runLoop({
+        ...common,
+        agentName: name,
+        model,
+        systemPrompt: buildSubagentPrompt(SYSTEM_PROMPT_CODE, name, role, peers),
+        userContent: `${userContent.split("\nTask:")[0]}\nYour task: ${task}`,
+        tools: [...CODE_TOOLS, ...MESSAGE_TOOLS],
+        maxIterations: SUBAGENT_MAX_ITERATIONS,
+        mailbox,
+        specialTools: { send_message: messageHandler(name, mailbox, agents) },
+        onAction: (action) => {
+          info.actionCount++;
+          common.onAction(action);
+          agents.onAgentUpdate({ ...info });
+        },
+      });
+      agents.onAgentUpdate({ ...info, status: "done", finishedAt: Date.now(), summary: out.summary });
+      return { agent: name, model, summary: out.summary };
+    } catch (error) {
+      if ((error as { name?: string })?.name === "AbortError") throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      agents.onAgentUpdate({ ...info, status: "error", finishedAt: Date.now(), summary: message });
+      return { agent: name, error: message };
+    } finally {
+      running--;
+    }
+  };
+
+  return runLoop({
+    ...common,
+    agentName: ORCHESTRATOR_NAME,
+    systemPrompt: SYSTEM_PROMPT_CODE + buildOrchestratorPrompt(agents.models),
+    userContent,
+    tools: [...CODE_TOOLS, ...DELEGATE_TOOLS, ...MESSAGE_TOOLS],
+    maxIterations,
+    mailbox,
+    specialTools: {
+      delegate_task: delegate,
+      send_message: messageHandler(ORCHESTRATOR_NAME, mailbox, agents),
+    },
+  });
+}
+
+function messageHandler(
+  from: string,
+  mailbox: Mailbox,
+  agents: NonNullable<RunAgentLoopOptions["agents"]>
+): SpecialHandler {
+  return async (call) => {
+    const to = String(call.arguments.to ?? "");
+    const content = String(call.arguments.message ?? "");
+    const delivered = mailbox.send(from, to, content);
+    if (!delivered) {
+      return { error: `Destinatario desconocido: ${to}. Agentes: ${mailbox.names().join(", ")}` };
+    }
+    agents.onAgentMessage({
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      from, to, content, timestamp: Date.now(),
+    });
+    return { delivered_to: delivered };
+  };
+}
+
+async function runLoop(p: LoopParams): Promise<{ summary: string; iterations: number }> {
+  const messages: AgentMessage[] = [
+    { role: "system", content: p.systemPrompt },
+    { role: "user", content: p.userContent },
+  ];
+  const specialNames = new Set(Object.keys(p.specialTools ?? {}));
+  const emit = (action: AgentAction) =>
+    p.onAction(
+      p.agentName
+        ? { ...action, id: `${p.agentName}:${action.id}`, agent: p.agentName }
+        : action
+    );
+
+  for (let iteration = 0; iteration < p.maxIterations; iteration++) {
+    if (p.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
+
+    if (p.agentName && p.mailbox) {
+      const inbox = p.mailbox.drain(p.agentName);
+      if (inbox.length > 0) {
+        messages.push({ role: "user", content: `Mensajes de otros agentes:\n${inbox.join("\n")}` });
+      }
+    }
 
     const response = await callNimWithTools({
-      apiKey: options.apiKey,
-      model: options.model,
-      params: options.params,
+      apiKey: p.apiKey,
+      model: p.model,
+      params: p.params,
       messages,
-      signal: options.signal,
+      tools: p.tools,
+      signal: p.signal,
     });
 
-    const choice = response.choices?.[0];
-    const assistantMessage = choice?.message ?? {};
+    const assistantMessage = response.choices?.[0]?.message ?? {};
     const content = assistantMessage.content ?? "";
     if (content.trim()) {
-      options.onThought?.(content.trim());
-      options.onAction({
+      p.onThought?.(content.trim());
+      emit({
         id: `think-${Date.now()}-${iteration}`,
         type: "THINK",
         title: "Razonando",
@@ -101,40 +281,79 @@ export async function runAgentLoop(options: RunAgentLoopOptions) {
     const parsedFallback = parseFallback(content);
     const toolCalls = normalizeToolCalls(assistantMessage.tool_calls, parsedFallback?.tool_calls);
 
-    messages.push({
-      role: "assistant",
-      content,
-      tool_calls: assistantMessage.tool_calls,
-    });
+    messages.push({ role: "assistant", content, tool_calls: assistantMessage.tool_calls });
 
     if (parsedFallback?.done || toolCalls.length === 0) {
       const summary = parsedFallback?.summary || content || "Tarea completada.";
-      options.onComplete?.(summary);
       return { summary, iterations: iteration + 1 };
     }
 
-    for (const toolCall of toolCalls) {
-      if (options.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
-      const { action, result } = await executeAgentTool(client, toolCall);
-      options.onAction(action);
+    const results = new Map<string, unknown>();
+    let needsConfirmation = false;
+
+    // Herramientas normales en orden; las especiales (delegar) en paralelo.
+    for (const call of toolCalls.filter((c) => !specialNames.has(c.name))) {
+      if (p.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
+      const { action, result } = await executeAgentTool(p.client, call);
+      emit(action);
+      results.set(call.id, result);
+      if (action.status === "needs-confirmation") needsConfirmation = true;
+    }
+
+    await Promise.all(
+      toolCalls
+        .filter((c) => specialNames.has(c.name))
+        .map(async (call) => {
+          const started = Date.now();
+          const isMessage = call.name === "send_message";
+          const label = isMessage
+            ? `Mensaje a ${String(call.arguments.to ?? "?")}`
+            : `Delegando en ${String(call.arguments.name ?? "agente")}`;
+          emit({
+            id: call.id,
+            type: isMessage ? "MESSAGE" : "AGENT",
+            title: label,
+            detail: String(isMessage ? call.arguments.message ?? "" : call.arguments.task ?? "").slice(0, 240),
+            status: "running",
+            timestamp: started,
+          });
+          const result = await p.specialTools![call.name](call);
+          const failed = Boolean((result as { error?: string })?.error);
+          emit({
+            id: call.id,
+            type: isMessage ? "MESSAGE" : "AGENT",
+            title: label,
+            detail: String(isMessage ? call.arguments.message ?? "" : call.arguments.task ?? "").slice(0, 240),
+            status: failed ? "error" : "success",
+            timestamp: started,
+            durationMs: Date.now() - started,
+            output: JSON.stringify(result, null, 2).slice(0, 4000),
+          });
+          results.set(call.id, result);
+        })
+    );
+
+    for (const call of toolCalls) {
       messages.push({
         role: "tool",
-        tool_call_id: toolCall.id,
-        name: toolCall.name,
-        content: JSON.stringify(result),
+        tool_call_id: call.id,
+        name: call.name,
+        content: JSON.stringify(results.get(call.id) ?? { error: "sin resultado" }),
       });
+    }
 
-      if (action.status === "needs-confirmation") {
-        const summary = "El agente se ha pausado porque una acción requiere confirmación explícita.";
-        options.onComplete?.(summary);
-        return { summary, iterations: iteration + 1 };
-      }
+    if (needsConfirmation) {
+      return {
+        summary: "El agente se ha pausado porque una acción requiere confirmación explícita.",
+        iterations: iteration + 1,
+      };
     }
   }
 
-  const summary = "Se alcanzó el límite de iteraciones del agente. Revisa el historial antes de continuar.";
-  options.onComplete?.(summary);
-  return { summary, iterations: maxIterations };
+  return {
+    summary: "Se alcanzó el límite de iteraciones del agente. Revisa el historial antes de continuar.",
+    iterations: p.maxIterations,
+  };
 }
 
 async function callNimWithTools(opts: {
@@ -142,6 +361,7 @@ async function callNimWithTools(opts: {
   model: string;
   params: GenerationParams;
   messages: AgentMessage[];
+  tools: readonly unknown[];
   signal?: AbortSignal;
 }) {
   const response = await fetch("/api/chat", {
@@ -157,7 +377,7 @@ async function callNimWithTools(opts: {
       max_tokens: opts.params.maxTokens,
       top_p: opts.params.topP,
       stream: false,
-      tools: CODE_TOOLS,
+      tools: opts.tools,
       tool_choice: "auto",
     }),
     signal: opts.signal,

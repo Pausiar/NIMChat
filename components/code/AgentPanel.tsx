@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Pause, Play, Square, WandSparkles } from "lucide-react";
+import { Bot, CheckCircle2, Loader2, MessagesSquare, Network, Pause, Play, Square, WandSparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AgentAction } from "@/lib/tools";
+import type { AgentInfo, AgentMessageEvent } from "@/lib/agents";
+import { getModel } from "@/lib/models";
 import { ActionItem } from "./ActionItem";
 
 const placeholders = [
@@ -24,6 +26,9 @@ interface AgentPanelProps {
   isPaused: boolean;
   disabled?: boolean;
   summary?: string;
+  agents?: AgentInfo[];
+  agentMessages?: AgentMessageEvent[];
+  agentsMode?: boolean;
 }
 
 export function AgentPanel({
@@ -37,6 +42,9 @@ export function AgentPanel({
   isPaused,
   disabled,
   summary,
+  agents = [],
+  agentMessages = [],
+  agentsMode,
 }: AgentPanelProps) {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,6 +76,47 @@ export function AgentPanel({
           </div>
         </div>
       </div>
+
+      {(agentsMode || agents.length > 0) && (
+        <div className="max-h-64 shrink-0 space-y-2 overflow-auto border-b border-white/10 p-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-nim-yellow">
+            <Network className="h-3.5 w-3.5" /> Modo agentes
+          </div>
+          {agents.length === 0 && (
+            <div className="text-xs text-white/40">El orquestador decidirá si necesita delegar.</div>
+          )}
+          {agents.map((agent) => (
+            <div key={agent.name} className="rounded-lg border border-white/10 bg-white/[0.035] p-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium text-white">{agent.name}</span>
+                {agent.status === "running" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-300" />
+                ) : agent.status === "done" ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5 text-red-300" />
+                )}
+              </div>
+              <div className="mt-0.5 text-[11px] text-white/40">
+                {agent.role || "subagente"} · {getModel(agent.model).name} · {agent.actionCount} acciones
+              </div>
+              {agent.summary && <div className="mt-1 line-clamp-3 text-[11px] text-white/55">{agent.summary}</div>}
+            </div>
+          ))}
+          {agentMessages.length > 0 && (
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-white/40">
+                <MessagesSquare className="h-3.5 w-3.5" /> Conversación entre agentes
+              </div>
+              {agentMessages.map((m) => (
+                <div key={m.id} className="rounded-md bg-black/30 px-2 py-1 text-[11px] text-white/60">
+                  <span className="text-nim-yellow">{m.from}</span> → {m.to}: {m.content}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {actions.length === 0 ? (

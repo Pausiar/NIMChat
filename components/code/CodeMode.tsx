@@ -7,6 +7,8 @@ import type { AppSettings } from "@/lib/chat-storage";
 import { NimChatServerClient, DEFAULT_LOCAL_SERVER_URL, type FileEntry, type ProjectInfo, type ReadFileResult, type TerminalEvent } from "@/lib/server-client";
 import { runAgentLoop } from "@/lib/agent-loop";
 import type { AgentAction } from "@/lib/tools";
+import { wantsAgents, type AgentInfo, type AgentMessageEvent } from "@/lib/agents";
+import { useModelCatalog } from "@/lib/use-model-catalog";
 import { getModel } from "@/lib/models";
 import { resolveMaxTokens } from "@/lib/token-policy";
 import { FileExplorer } from "./FileExplorer";
@@ -33,6 +35,9 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
   const [gitStat, setGitStat] = useState("");
   const [task, setTask] = useState("");
   const [actions, setActions] = useState<AgentAction[]>([]);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [agentMessages, setAgentMessages] = useState<AgentMessageEvent[]>([]);
+  const { models: catalogModels } = useModelCatalog();
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [summary, setSummary] = useState<string | undefined>();
@@ -247,6 +252,8 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
     setSummary(undefined);
     setError(null);
     setActions([]);
+    setAgents([]);
+    setAgentMessages([]);
 
     try {
       await runAgentLoop({
@@ -259,7 +266,24 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
         },
         serverUrl,
         signal: controller.signal,
-        onAction: (action) => setActions((current) => [action, ...current]),
+        agents: wantsAgents(task)
+          ? {
+              models: catalogModels,
+              onAgentUpdate: (agent) =>
+                setAgents((current) =>
+                  current.some((a) => a.name === agent.name)
+                    ? current.map((a) => (a.name === agent.name ? agent : a))
+                    : [...current, agent]
+                ),
+              onAgentMessage: (message) => setAgentMessages((current) => [...current, message]),
+            }
+          : undefined,
+        onAction: (action) =>
+          setActions((current) =>
+            current.some((a) => a.id === action.id)
+              ? current.map((a) => (a.id === action.id ? action : a))
+              : [action, ...current]
+          ),
         onComplete: (value) => setSummary(value),
       });
       await refreshProject();
@@ -415,6 +439,9 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
           isPaused={isPaused}
           disabled={!connected}
           summary={summary}
+          agents={agents}
+          agentMessages={agentMessages}
+          agentsMode={wantsAgents(task) || agents.length > 0}
         />
       </div>
 
