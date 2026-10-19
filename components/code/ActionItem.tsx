@@ -2,6 +2,8 @@
 
 import {
   Bot,
+  MessagesSquare,
+  Network,
   CheckCircle2,
   Clock3,
   FileMinus,
@@ -26,6 +28,8 @@ const iconByType: Record<AgentActionType, React.ReactNode> = {
   SEARCH: <Search className="h-4 w-4" />,
   GIT: <GitBranch className="h-4 w-4" />,
   THINK: <Bot className="h-4 w-4" />,
+  AGENT: <Network className="h-4 w-4" />,
+  MESSAGE: <MessagesSquare className="h-4 w-4" />,
 };
 
 export function ActionItem({ action, onViewDiff }: { action: AgentAction; onViewDiff?: () => void }) {
@@ -59,6 +63,11 @@ export function ActionItem({ action, onViewDiff }: { action: AgentAction; onView
           </div>
           {action.detail && <div className="mt-1 line-clamp-2 text-xs text-white/45">{action.detail}</div>}
           <div className="mt-2 flex items-center gap-2 text-[11px] text-white/35">
+            {action.agent && (
+              <span className="rounded-full border border-nim-yellow/30 bg-nim-yellow/10 px-1.5 text-nim-yellow">
+                {action.agent}
+              </span>
+            )}
             <span>{timeAgo(action.timestamp)}</span>
             {action.durationMs != null && <span>{(action.durationMs / 1000).toFixed(1)}s</span>}
             {action.diff && (

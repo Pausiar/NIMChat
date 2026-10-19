@@ -38,3 +38,4 @@ opencode
 
 # nimchat local server runtime
 .nimchat
+tsconfig.tsbuildinfo

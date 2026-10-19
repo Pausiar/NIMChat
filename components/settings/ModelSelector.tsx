@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AVAILABLE_MODELS, getModel } from "@/lib/models";
+import { getModel } from "@/lib/models";
+import { useModelCatalog } from "@/lib/use-model-catalog";
 
 interface ModelSelectorProps {
   value: string;
@@ -17,6 +18,7 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const current = getModel(value);
+  const { models, status } = useModelCatalog();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -35,7 +37,14 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         sideOffset={6}
         className="w-[360px] max-h-[60vh] overflow-y-auto"
       >
-        {AVAILABLE_MODELS.map((m) => (
+        <div className="px-2 pb-1 pt-1 text-[10px] uppercase tracking-wide text-white/30">
+          {status === "live"
+            ? `Catálogo NVIDIA NIM · ${models.length} modelos`
+            : status === "loading"
+              ? "Actualizando catálogo…"
+              : "Catálogo local (sin conexión con NIM)"}
+        </div>
+        {models.map((m) => (
           <DropdownMenuItem
             key={m.id}
             onSelect={() => onChange(m.id)}

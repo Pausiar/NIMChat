@@ -9,7 +9,10 @@ Una interfaz web local, moderna y funcional para los mejores modelos open‑sour
 ## ✨ Funcionalidades
 
 - **Chat con streaming token a token** y memoria completa de conversación.
-- **Multi‑modelo**: Llama 3.3 70B, Mistral 7B, Qwen 2.5 72B, DeepSeek‑R1, Phi‑3 Mini.
+- **Multi‑modelo con catálogo en vivo**: el selector lee la lista actual de NVIDIA NIM (con caché y fallback local).
+- **Modo Code con agentes**: pide «usa agentes» y un orquestador reparte el trabajo entre subagentes en paralelo, cada uno con su modelo.
+- **Instalable (PWA)** y página `/descargar`.
+- **Información legal** en `/legal/*` (rellena tus datos en `lib/legal-config.ts`).
 - **Gestión de chats** persistente en `localStorage`: crear, renombrar (doble clic), eliminar (con confirmación). Auto‑título a partir del primer mensaje.
 - **System prompt** configurable global y por chat.
 - **Parámetros de generación** ajustables: `temperature`, `max_tokens`, `top_p`.

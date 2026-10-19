@@ -1,6 +1,6 @@
 import type { NimChatServerClient } from "./server-client";
 
-export type AgentActionType = "READ" | "WRITE" | "EDIT" | "DELETE" | "RUN" | "SEARCH" | "GIT" | "THINK";
+export type AgentActionType = "READ" | "WRITE" | "EDIT" | "DELETE" | "RUN" | "SEARCH" | "GIT" | "THINK" | "AGENT" | "MESSAGE";
 export type AgentActionStatus = "pending" | "running" | "success" | "error" | "needs-confirmation";
 
 export interface AgentAction {
@@ -10,6 +10,8 @@ export interface AgentAction {
   detail?: string;
   status: AgentActionStatus;
   timestamp: number;
+  /** Agente que originó la acción (solo en modo agentes). */
+  agent?: string;
   durationMs?: number;
   output?: string;
   diff?: string;
