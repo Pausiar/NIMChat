@@ -48,8 +48,8 @@ export function ApiKeyInput({ value, onChange }: ApiKeyInputProps) {
         </button>
       </div>
       <p className="text-xs text-white/40">
-        La key se guarda solo en tu navegador (localStorage). Nunca se envía a
-        ningún servidor que no sea NVIDIA NIM.
+        La key se guarda solo en tu navegador (localStorage). Se envía en cada
+        petición al proxy de NimChat, que la reenvía a NVIDIA NIM sin guardarla.
       </p>
     </div>
   );

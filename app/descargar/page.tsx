@@ -64,6 +64,12 @@ npm run dev      # interfaz en :3000`}
         Instaladores nativos (.exe, .dmg) todavía no disponibles: requieren
         firma de código oficial.
       </p>
+      <nav aria-label="Información legal" className="mt-4 flex flex-wrap gap-x-4 text-xs text-white/40">
+        <Link href="/legal/aviso-legal" className="hover:text-white">Aviso legal</Link>
+        <Link href="/legal/privacidad" className="hover:text-white">Privacidad</Link>
+        <Link href="/legal/terminos" className="hover:text-white">Términos</Link>
+        <Link href="/legal/almacenamiento" className="hover:text-white">Almacenamiento</Link>
+      </nav>
     </main>
   );
 }

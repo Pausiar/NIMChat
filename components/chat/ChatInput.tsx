@@ -169,6 +169,12 @@ export function ChatInput({
           )}
         </div>
       </motion.div>
+      <p className="mt-2 text-center text-[11px] text-white/30">
+        Estás hablando con una IA y puede equivocarse: verifica lo importante.{" "}
+        <a href="/legal/privacidad" className="underline hover:text-white/60">
+          Privacidad
+        </a>
+      </p>
     </div>
   );
 }

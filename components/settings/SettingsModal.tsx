@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +186,12 @@ export function SettingsModal({
           >
             Restablecer
           </Button>
+          <nav aria-label="Información legal" className="flex flex-wrap gap-x-3 text-[11px] text-white/40">
+            <Link href="/legal/aviso-legal" className="hover:text-white">Aviso legal</Link>
+            <Link href="/legal/privacidad" className="hover:text-white">Privacidad</Link>
+            <Link href="/legal/terminos" className="hover:text-white">Términos</Link>
+            <Link href="/legal/almacenamiento" className="hover:text-white">Almacenamiento</Link>
+          </nav>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

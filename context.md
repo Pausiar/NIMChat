@@ -31,7 +31,9 @@ components/
 lib/
   nvidia-nim.ts     Cliente streaming hacia /api/chat
   chat-storage.ts   Persistencia local de chats/ajustes
-  models.ts         Catálogo de modelos NIM
+  models.ts         Catálogo curado + fusión con la lista viva de NIM (/api/models)
+  agents.ts         Modo agentes: detección, herramientas delegate_task/send_message, buzón
+  legal-config.ts   Datos del titular para las páginas /legal (rellenar)
   server-client.ts  Cliente HTTP/WS hacia el servidor local de Code Mode
   tools.ts          Definición y ejecución de herramientas del agente
   agent-loop.ts     Bucle agente con tool-calling y fallback JSON
@@ -51,7 +53,7 @@ public/             Logos NIMChat
 | Chat     | Activo       | Conversación clásica con NVIDIA NIM, streaming de tokens.             |
 | Design   | Activo       | Genera componentes React/Tailwind y los renderiza en iframe sandbox.   |
 | Code     | Activo       | Agente autónomo que lee/edita archivos y ejecuta comandos vía servidor local. |
-| Agents   | Próximamente | Orquestación de varios agentes especializados.                         |
+| Agents   | Dentro de Code | Se activa cuando el usuario pide agentes en su tarea: orquestador + subagentes en paralelo (lib/agents.ts, lib/agent-loop.ts). |
 | Image    | Próximamente | Generación de imágenes con modelos NIM de visión.                      |
 
 ## Cómo se ejecuta
@@ -91,7 +93,17 @@ NimChat usa una paleta **amarillo / negro** (NIM brand). Los tokens viven en
 
 ## Roadmap corto
 
-- Modo Agents: orquestador multi-agente con planificación y delegación.
 - Modo Image: generación con modelos NIM de imagen.
 - Editor con Shiki y terminal con xterm en Code Mode.
 - Modo supervisado/autónomo + diff-before-apply para el agente.
+
+## Modo agentes (dentro de Code)
+
+- Se activa si la tarea menciona agentes/subagentes/orquestador (`wantsAgents`).
+- El orquestador recibe `delegate_task` y `send_message`; varios `delegate_task` en un turno corren en paralelo (máx. 4 a la vez, 8 por ejecución).
+- Cada subagente puede usar un modelo distinto (id del catálogo vivo; si no existe, hereda el del orquestador) y se comunica por un buzón compartido.
+- La UI (AgentPanel) muestra tarjetas por agente, la conversación entre ellos y cada acción etiquetada con su agente.
+
+## Legal
+
+Páginas en `app/legal/*` (aviso legal, privacidad, términos, almacenamiento local). Los datos del titular se rellenan en `lib/legal-config.ts`; mientras estén vacíos se muestran como «PENDIENTE». Revisar con un profesional antes de publicar.
