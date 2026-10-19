@@ -40,12 +40,6 @@ const CodeMode = lazy(() =>
   }))
 );
 
-const AgentsModePlaceholder = lazy(() =>
-  import("@/components/agents/AgentsModePlaceholder").then((mod) => ({
-    default: mod.AgentsModePlaceholder,
-  }))
-);
-
 const ImageModePlaceholder = lazy(() =>
   import("@/components/image/ImageModePlaceholder").then((mod) => ({
     default: mod.ImageModePlaceholder,
@@ -68,7 +62,6 @@ function isAppMode(value: string | null): value is AppMode {
     value === "chat" ||
     value === "design" ||
     value === "code" ||
-    value === "agents" ||
     value === "image"
   );
 }
@@ -462,14 +455,6 @@ export default function HomePage() {
         <main className="min-w-0 flex-1">
           <Suspense fallback={<ModeFallback label="Cargando Code Mode..." />}>
             <CodeMode settings={settings} onOpenSettings={() => setSettingsOpen(true)} />
-          </Suspense>
-        </main>
-      )}
-
-      {activeMode === "agents" && (
-        <main className="min-w-0 flex-1">
-          <Suspense fallback={<ModeFallback label="Cargando Agents..." />}>
-            <AgentsModePlaceholder onBack={() => handleModeChange("chat")} />
           </Suspense>
         </main>
       )}

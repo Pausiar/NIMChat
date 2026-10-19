@@ -6,7 +6,7 @@ import simpleGit from "simple-git";
 import { createFilesRouter } from "./routes/files";
 import { attachTerminalWebSocket, createTerminalRouter } from "./routes/terminal";
 import { createGitRouter } from "./routes/git";
-import { normalizeRoot, safeJsonError, type ProjectState } from "./utils/security";
+import { isOriginAllowed, normalizeRoot, safeJsonError, type ProjectState } from "./utils/security";
 
 const PORT = Number(process.env.NIMCHAT_SERVER_PORT ?? 4177);
 const state: ProjectState = {
@@ -18,7 +18,12 @@ const server = http.createServer(app);
 attachTerminalWebSocket(server);
 
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
+  const origin = req.headers.origin;
+  if (!isOriginAllowed(origin)) {
+    res.status(403).json({ error: "Origen no permitido" });
+    return;
+  }
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-nvidia-api-key");
   if (req.method === "OPTIONS") {
@@ -72,6 +77,14 @@ app.use("/api/git", createGitRouter(state));
 const watcher = chokidar.watch([], { ignoreInitial: true });
 watcher.on("all", () => {
   // Reserved for future file-tree push updates. The UI currently refreshes on demand.
+});
+
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`El puerto ${PORT} ya está en uso. ¿Hay otra instancia de NimChat abierta?`);
+  } else {
+    console.error(error);
+  }
 });
 
 server.listen(PORT, () => {

@@ -8,7 +8,10 @@
     "nimchat-server": "tsx server/index.ts",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop": "next build && node scripts/prepare-desktop.mjs && electron .",
+    "desktop:dist": "next build && node scripts/prepare-desktop.mjs && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
     "@babel/standalone": "^7.29.4",
@@ -48,6 +51,54 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.14",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.28.0"
+  },
+  "main": "electron/main.cjs",
+  "description": "Suite de IA para desarrolladores con modelos de NVIDIA NIM",
+  "author": "Pausiar",
+  "homepage": "https://github.com/Pausiar/NIMChat",
+  "build": {
+    "appId": "com.pausiar.nimchat",
+    "productName": "NimChat",
+    "artifactName": "NimChat-Setup-${version}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/desktop",
+        "to": ".",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NimChat"
+    }
   }
 }

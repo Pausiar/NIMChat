@@ -1,0 +1,44 @@
+name: Instalador de escritorio (Windows)
+
+on:
+  push:
+    branches: ["claude/**"]
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar la app e instalador (.exe)
+        run: npm run desktop:dist
+
+      - name: Subir instalador como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: NimChat-Windows
+          path: release/NimChat-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Adjuntar instalador al release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          files: release/NimChat-Setup-*.exe
+          generate_release_notes: true

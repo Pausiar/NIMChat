@@ -80,3 +80,25 @@ export function safeJsonError(error: unknown) {
   const message = error instanceof Error ? error.message : "Error desconocido";
   return { status: 500, body: { error: message } };
 }
+
+/**
+ * Orígenes que pueden hablar con el servidor local. Sin esto cualquier web
+ * abierta en el navegador podría ejecutar comandos en el equipo del usuario.
+ * Las peticiones sin cabecera Origin (la app de escritorio, curl) se aceptan.
+ */
+export function getAllowedOrigins(): Set<string> {
+  const configured = (process.env.NIMCHAT_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return new Set([
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    ...configured,
+  ]);
+}
+
+export function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true;
+  return getAllowedOrigins().has(origin);
+}
