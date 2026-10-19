@@ -24,7 +24,15 @@ Una interfaz web local, moderna y funcional para los mejores modelos open‑sour
 
 ---
 
-## 🚀 Instalación
+## 🖥️ App de escritorio (Windows)
+
+Descarga `NimChat-Setup-x.y.z.exe` desde [Releases](https://github.com/Pausiar/NIMChat/releases/latest) e instálala. Incluye la interfaz y el servidor local de Code: no hay que arrancar nada a mano. Los proyectos por defecto viven en `Documentos/NimChat Projects` y puedes abrir otra carpeta con **Archivo → Abrir carpeta de proyecto**.
+
+> Windows puede mostrar un aviso de SmartScreen porque la app aún no está firmada.
+
+Para generarla tú mismo: `npm install && npm run desktop:dist` (instalador en `release/`). Para probarla sin empaquetar: `npm run desktop`. El instalador de Windows también lo construye GitHub Actions (`.github/workflows/desktop-release.yml`) y lo adjunta al publicar un release.
+
+## 🚀 Instalación (versión web)
 
 ```bash
 # 1. Instala dependencias

@@ -6,6 +6,7 @@ import express from "express";
 import { WebSocketServer, type WebSocket } from "ws";
 import {
   isDangerousCommand,
+  isOriginAllowed,
   resolveProjectPath,
   safeJsonError,
   type ProjectState,
@@ -25,7 +26,11 @@ interface TerminalEvent {
 const clients = new Set<WebSocket>();
 
 export function attachTerminalWebSocket(server: Server) {
-  const wss = new WebSocketServer({ server, path: "/ws/terminal" });
+  const wss = new WebSocketServer({
+    server,
+    path: "/ws/terminal",
+    verifyClient: ({ origin }: { origin?: string }) => isOriginAllowed(origin),
+  });
   wss.on("connection", (socket) => {
     clients.add(socket);
     socket.on("close", () => clients.delete(socket));

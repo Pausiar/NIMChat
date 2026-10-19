@@ -107,3 +107,11 @@ NimChat usa una paleta **amarillo / negro** (NIM brand). Los tokens viven en
 ## Legal
 
 Páginas en `app/legal/*` (aviso legal, privacidad, términos, almacenamiento local). Los datos del titular se rellenan en `lib/legal-config.ts`; mientras estén vacíos se muestran como «PENDIENTE». Revisar con un profesional antes de publicar.
+
+## App de escritorio (Electron)
+
+- `electron/main.cjs` abre la ventana; `electron/runtime.cjs` arranca en proceso la web (Next `output: "standalone"`) y el servidor de Code (empaquetado con esbuild en `build/desktop/server.cjs`).
+- `scripts/prepare-desktop.mjs` reúne todo en `build/desktop`; `electron-builder` (config en `package.json > build`) genera el instalador NSIS en `release/`.
+- El servidor de Code usa el puerto fijo 4177 (la interfaz lo tiene como URL por defecto); la web usa el primer puerto libre desde 4178.
+- El servidor local solo acepta peticiones sin `Origin` (la app) o de los orígenes en `NIMCHAT_ALLOWED_ORIGINS` (por defecto `localhost:3000`). Esto impide que una web ajena ejecute comandos vía localhost.
+- CI: `.github/workflows/desktop-release.yml` construye el `.exe` en Windows y lo adjunta al release.

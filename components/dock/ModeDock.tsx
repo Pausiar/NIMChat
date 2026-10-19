@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { Bot, Brush, ImageIcon, MessageCircle, Terminal } from "lucide-react";
+import { Brush, ImageIcon, MessageCircle, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type AppMode = "chat" | "design" | "code" | "agents" | "image";
+export type AppMode = "chat" | "design" | "code" | "image";
 
 interface DockItem {
   id: AppMode;
@@ -34,17 +34,9 @@ const dockItems: DockItem[] = [
   {
     id: "code",
     name: "Code",
-    description: "Agente local",
+    description: "Agente y agentes",
     icon: <Terminal className="h-5 w-5" />,
     color: "bg-gradient-to-br from-zinc-800 to-black ring-1 ring-nim-yellow/40",
-  },
-  {
-    id: "agents",
-    name: "Agents",
-    description: "Próximamente",
-    icon: <Bot className="h-5 w-5" />,
-    color: "bg-gradient-to-br from-zinc-700 to-zinc-900",
-    disabled: true,
   },
   {
     id: "image",
