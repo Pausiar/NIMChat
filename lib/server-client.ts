@@ -68,6 +68,38 @@ export class LocalServerError extends Error {
   }
 }
 
+export type McpStatus = "disconnected" | "connecting" | "connected" | "error";
+
+export interface McpTool {
+  name: string;
+  description?: string;
+  inputSchema: Record<string, unknown>;
+  readOnly: boolean;
+}
+
+export interface McpServerInfo {
+  id: string;
+  name: string;
+  transport: "stdio" | "http";
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
+  enabled: boolean;
+  allowWrites: boolean;
+  status: McpStatus;
+  error?: string;
+  tools: McpTool[];
+}
+
+export type McpServerInput = Partial<Omit<McpServerInfo, "status" | "error" | "tools">> & { name: string };
+
+export interface McpAgentTool extends McpTool {
+  serverId: string;
+  serverName: string;
+}
+
 export class NimChatServerClient {
   baseUrl: string;
 
@@ -87,6 +119,36 @@ export class NimChatServerClient {
     return this.request<{ ok: true; root: string; name: string }>("/api/project/open", {
       method: "POST",
       body: JSON.stringify({ path }),
+    });
+  }
+
+  async listMcpServers() {
+    return (await this.request<{ servers: McpServerInfo[] }>("/api/mcp/servers")).servers;
+  }
+
+  async saveMcpServer(server: McpServerInput) {
+    return this.request<{ ok: true; id: string }>("/api/mcp/servers", {
+      method: "POST",
+      body: JSON.stringify(server),
+    });
+  }
+
+  async deleteMcpServer(id: string) {
+    return this.request<{ ok: true }>(`/api/mcp/servers/${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
+  async reconnectMcpServer(id: string) {
+    return this.request<{ ok: true }>(`/api/mcp/servers/${encodeURIComponent(id)}/reconnect`, { method: "POST" });
+  }
+
+  async getMcpAgentTools() {
+    return (await this.request<{ tools: McpAgentTool[] }>("/api/mcp/tools")).tools;
+  }
+
+  async callMcpTool(serverId: string, tool: string, args: Record<string, unknown>) {
+    return this.request<{ text: string; isError: boolean }>("/api/mcp/call", {
+      method: "POST",
+      body: JSON.stringify({ serverId, tool, arguments: args }),
     });
   }
 

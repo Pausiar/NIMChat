@@ -4,6 +4,7 @@ import {
   Bot,
   MessagesSquare,
   Network,
+  Plug,
   CheckCircle2,
   Clock3,
   FileMinus,
@@ -30,28 +31,29 @@ const iconByType: Record<AgentActionType, React.ReactNode> = {
   THINK: <Bot className="h-4 w-4" />,
   AGENT: <Network className="h-4 w-4" />,
   MESSAGE: <MessagesSquare className="h-4 w-4" />,
+  MCP: <Plug className="h-4 w-4" />,
 };
 
 export function ActionItem({ action, onViewDiff }: { action: AgentAction; onViewDiff?: () => void }) {
   const statusIcon =
     action.status === "success" ? (
-      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+      <CheckCircle2 className="h-3.5 w-3.5 text-nim-yellow" />
     ) : action.status === "error" || action.status === "needs-confirmation" ? (
       <XCircle className="h-3.5 w-3.5 text-red-300" />
     ) : (
-      <Clock3 className="h-3.5 w-3.5 text-sky-300" />
+      <Clock3 className="h-3.5 w-3.5 text-nim-yellow" />
     );
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-sm text-white/80">
+    <div className="rounded-md border border-border bg-white/[0.02] p-2.5 text-sm text-white/80">
       <div className="flex items-start gap-3">
         <span
           className={cn(
             "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/25",
-            action.status === "running" && "text-sky-200",
-            action.status === "success" && "text-emerald-200",
+            action.status === "running" && "text-nim-yellow",
+            action.status === "success" && "text-nim-yellow",
             action.status === "error" && "text-red-200",
-            action.status === "needs-confirmation" && "text-amber-200"
+            action.status === "needs-confirmation" && "text-nim-yellow"
           )}
         >
           {iconByType[action.type] ?? <FileSearch className="h-4 w-4" />}
@@ -71,13 +73,13 @@ export function ActionItem({ action, onViewDiff }: { action: AgentAction; onView
             <span>{timeAgo(action.timestamp)}</span>
             {action.durationMs != null && <span>{(action.durationMs / 1000).toFixed(1)}s</span>}
             {action.diff && (
-              <button type="button" onClick={onViewDiff} className="text-sky-300 hover:text-sky-200">
+              <button type="button" onClick={onViewDiff} className="text-nim-yellow hover:text-nim-yellow">
                 Ver diff
               </button>
             )}
           </div>
           {action.status === "needs-confirmation" && (
-            <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs text-amber-100">
+            <div className="mt-2 rounded-lg border border-nim-yellow/30 bg-nim-yellow/10 px-2 py-1 text-xs text-nim-yellow">
               Requiere confirmación explícita antes de continuar.
             </div>
           )}

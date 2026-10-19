@@ -1,19 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { ArrowUp, Square, ChevronDown, Check, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowUp, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getModel } from "@/lib/models";
-import { useModelCatalog } from "@/lib/use-model-catalog";
+import { ModelPicker } from "@/components/shared/ModelPicker";
 
 interface ChatInputProps {
   value: string;
@@ -28,7 +19,7 @@ interface ChatInputProps {
 
 function useAutoResize(
   ref: React.RefObject<HTMLTextAreaElement | null>,
-  minHeight = 56,
+  minHeight = 28,
   maxHeight = 220
 ) {
   const adjust = useCallback(() => {
@@ -70,89 +61,35 @@ export function ChatInput({
     }
   };
 
-  const model = getModel(selectedModel);
-  const { models } = useModelCatalog();
-
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-6">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-2xl border border-white/10 bg-[#141418] shadow-xl backdrop-blur"
-      >
-        <Textarea
-          ref={taRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter nueva línea)"
-          aria-label="Mensaje al modelo"
-          disabled={disabled}
-          className={cn(
-            "min-h-[56px] resize-none border-0 bg-transparent px-4 py-4 text-[15px] leading-relaxed text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
-          )}
-        />
-        <div className="flex items-center justify-between gap-2 border-t border-white/5 px-3 py-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 rounded-lg px-2 text-xs text-white/70 hover:bg-white/5 hover:text-white"
-                aria-label="Seleccionar modelo"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span className="font-medium">{model.name}</span>
-                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              side="top"
-              sideOffset={8}
-              className="w-[320px] max-h-[60vh] overflow-y-auto"
-            >
-              {models.map((m) => (
-                <DropdownMenuItem
-                  key={m.id}
-                  onSelect={() => onModelChange(m.id)}
-                  className="flex flex-col items-start gap-0.5 py-2"
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <span className="font-medium text-white">{m.name}</span>
-                    {m.id === selectedModel && (
-                      <Check className="h-4 w-4 text-emerald-400" />
-                    )}
-                  </div>
-                  <div className="text-[11px] text-white/50">
-                    {m.provider} · {m.size}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {m.capabilities.map((c) => (
-                      <span
-                        key={c}
-                        className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/60"
-                      >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
+    <div className="mx-auto w-full max-w-3xl px-4 pb-4">
+      <div className="rounded-lg border border-border bg-[#101010] transition-colors focus-within:border-nim-yellow/50">
+        <div className="flex items-start gap-2 px-3 pt-3">
+          <span className="ui-mono select-none pt-px text-nim-yellow">&gt;</span>
+          <Textarea
+            ref={taRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe un mensaje…"
+            aria-label="Mensaje al modelo"
+            disabled={disabled}
+            className="min-h-[28px] resize-none border-0 bg-transparent p-0 text-[15px] leading-relaxed text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2 px-2 py-2">
+          <ModelPicker value={selectedModel} onChange={onModelChange} side="top" />
           {isStreaming ? (
             <Button
               type="button"
               size="sm"
-              variant="destructive"
+              variant="outline"
               onClick={onStop}
-              className="h-8 gap-1.5 rounded-lg px-3"
               aria-label="Detener generación"
+              className="ui-mono gap-1.5 border-red-500/40 text-red-300 hover:bg-red-500/10"
             >
-              <Square className="h-3.5 w-3.5 fill-current" />
-              Detener
+              <Square className="h-3 w-3 fill-current" />
+              detener
             </Button>
           ) : (
             <Button
@@ -160,7 +97,6 @@ export function ChatInput({
               size="sm"
               onClick={onSend}
               disabled={!value.trim() || disabled}
-              className="h-8 gap-1.5 rounded-lg bg-white px-3 text-black hover:bg-white/90 disabled:opacity-30"
               aria-label="Enviar mensaje"
             >
               Enviar
@@ -168,11 +104,11 @@ export function ChatInput({
             </Button>
           )}
         </div>
-      </motion.div>
-      <p className="mt-2 text-center text-[11px] text-white/30">
-        Estás hablando con una IA y puede equivocarse: verifica lo importante.{" "}
-        <a href="/legal/privacidad" className="underline hover:text-white/60">
-          Privacidad
+      </div>
+      <p className="ui-mono mt-2 text-center text-[10px] text-white/25">
+        Respuestas de una IA: pueden contener errores.{" "}
+        <a href="/legal/privacidad" className="underline hover:text-white/50">
+          privacidad
         </a>
       </p>
     </div>

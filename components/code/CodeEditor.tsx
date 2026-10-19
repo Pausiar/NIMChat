@@ -52,29 +52,29 @@ export function CodeEditor({
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col bg-[#09090b]">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/25 p-1">
-          <TabButton active={activeTab === "editor"} onClick={() => onTabChange("editor")} icon={<Code2 className="h-3.5 w-3.5" />} label="Editor" />
-          <TabButton active={activeTab === "terminal"} onClick={() => onTabChange("terminal")} icon={<TerminalIcon className="h-3.5 w-3.5" />} label="Terminal" />
-          <TabButton active={activeTab === "git"} onClick={() => onTabChange("git")} icon={<FileCode2 className="h-3.5 w-3.5" />} label="Git Diff" />
+    <section className="flex h-full min-h-0 flex-col bg-background">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-border px-2">
+        <div className="ui-mono flex h-full items-stretch">
+          <TabButton active={activeTab === "editor"} onClick={() => onTabChange("editor")} icon={<Code2 className="h-3.5 w-3.5" />} label="editor" />
+          <TabButton active={activeTab === "terminal"} onClick={() => onTabChange("terminal")} icon={<TerminalIcon className="h-3.5 w-3.5" />} label="terminal" />
+          <TabButton active={activeTab === "git"} onClick={() => onTabChange("git")} icon={<FileCode2 className="h-3.5 w-3.5" />} label="cambios" />
         </div>
         {activeTab === "editor" && file && (
           <div className="flex min-w-0 items-center gap-2">
             <span className="hidden truncate text-xs text-white/45 md:block">{file.path}</span>
             {editable ? (
               <>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setEditable(false)} className="h-8 px-2 text-white/60 hover:text-white">
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditable(false)} >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Rechazar
                 </Button>
-                <Button type="button" size="sm" onClick={() => file && onSaveFile(file.path, draft)} disabled={!isDirty || disabled} className="h-8 bg-white text-black hover:bg-white/90">
+                <Button type="button" size="sm" onClick={() => file && onSaveFile(file.path, draft)} disabled={!isDirty || disabled} >
                   <Check className="h-3.5 w-3.5" />
                   Aplicar
                 </Button>
               </>
             ) : (
-              <Button type="button" size="sm" variant="outline" onClick={startEdit} disabled={disabled} className="h-8 border-white/10 text-white/70 hover:text-white">
+              <Button type="button" size="sm" variant="outline" onClick={startEdit} disabled={disabled} >
                 <Edit3 className="h-3.5 w-3.5" />
                 Editar
               </Button>
@@ -88,22 +88,22 @@ export function CodeEditor({
           <div className="h-full min-h-0 overflow-auto">
             {!file ? (
               <div className="flex h-full flex-col items-center justify-center text-center text-white/35">
-                <FileCode2 className="mb-3 h-10 w-10" />
-                <div>Selecciona un archivo para abrirlo</div>
+                <FileCode2 className="mb-2 h-6 w-6" />
+                <div className="ui-mono text-xs">selecciona un archivo del explorador</div>
               </div>
             ) : editable ? (
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 spellCheck={false}
-                className="h-full min-h-[560px] w-full resize-none bg-[#080809] p-4 font-mono text-sm leading-relaxed text-white outline-none"
+                className="h-full min-h-[560px] w-full resize-none bg-background p-4 font-mono text-sm leading-relaxed text-white outline-none"
               />
             ) : (
               <SyntaxHighlighter
                 language={language}
                 style={vscDarkPlus}
                 showLineNumbers
-                customStyle={{ margin: 0, minHeight: "100%", background: "#080809", fontSize: 13, lineHeight: 1.65 }}
+                customStyle={{ margin: 0, minHeight: "100%", background: "#0a0a0a", fontSize: 13, lineHeight: 1.65 }}
                 lineNumberStyle={{ color: "rgba(255,255,255,0.25)", minWidth: "3em" }}
               >
                 {file.content || " "}
@@ -126,12 +126,13 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-8 items-center gap-1.5 rounded-md px-3 text-xs text-white/50 transition-colors hover:text-white",
-        active && "bg-white text-black hover:text-black"
+        "relative flex items-center gap-1.5 px-3 text-xs text-white/45 transition-colors hover:text-white",
+        active && "text-white"
       )}
     >
       {icon}
       {label}
+      {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-nim-yellow" />}
     </button>
   );
 }

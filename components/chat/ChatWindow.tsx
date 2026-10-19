@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { Message } from "@/lib/chat-storage";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
-import { Bot } from "lucide-react";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -27,21 +26,18 @@ export function ChatWindow({
 
   if (visible.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center text-white/60">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
-          <Bot className="h-7 w-7" />
-        </div>
-        <h2 className="text-2xl font-semibold text-white">¿En qué te ayudo hoy?</h2>
-        <p className="max-w-md text-sm">
-          NimChat es tu interfaz para los modelos open-source de NVIDIA NIM.
-          Selecciona un modelo y empieza a conversar.
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+        <div className="ui-mono text-2xl text-nim-yellow">&gt;_</div>
+        <h2 className="text-lg font-medium text-white">¿En qué trabajamos?</h2>
+        <p className="max-w-sm text-sm text-white/40">
+          Elige un modelo de NVIDIA NIM y escribe tu primer mensaje.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
       {visible.map((m) => (
         <MessageBubble
           key={m.id}
@@ -52,9 +48,7 @@ export function ChatWindow({
       {isStreaming &&
         !visible.some((m) => m.id === streamingMessageId && m.content) && (
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
-              <Bot className="h-4 w-4 text-white/70" />
-            </div>
+            <span className="ui-mono mt-0.5 text-nim-yellow">●</span>
             <TypingIndicator />
           </div>
         )}

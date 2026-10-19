@@ -11,6 +11,7 @@ import {
   FolderOpen,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Search,
   Terminal,
   Trash2,
@@ -47,39 +48,32 @@ export function FileExplorer({
   const filtered = useMemo(() => filterEntries(entries, query), [entries, query]);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-r border-white/10 bg-[#0c0c0f]">
-      <div className="border-b border-white/10 p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold text-white">Explorador</div>
-            <div className="text-[11px] text-white/35">Proyecto activo</div>
-          </div>
-          <Button type="button" size="sm" variant="ghost" onClick={onRefresh} className="h-8 px-2 text-white/60 hover:text-white">
-            Actualizar
-          </Button>
-        </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar archivos"
-            className="h-9 w-full rounded-lg border border-white/10 bg-black/25 pl-8 pr-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/25"
-          />
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => onNewFile("./nuevo-archivo.ts")} className="h-8 border-white/10 text-xs text-white/70 hover:text-white">
+    <aside className="flex h-full min-h-0 flex-col border-r border-border bg-[#0b0b0b]">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
+        <span className="ui-mono text-[11px] uppercase tracking-wider text-white/35">explorador</span>
+        <div className="flex items-center gap-0.5">
+          <Button type="button" size="icon" variant="ghost" aria-label="Nuevo archivo" onClick={() => onNewFile("./nuevo-archivo.ts")} className="h-6 w-6">
             <Plus className="h-3.5 w-3.5" />
-            Archivo
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => onNewFolder("./nueva-carpeta/.gitkeep")} className="h-8 border-white/10 text-xs text-white/70 hover:text-white">
+          <Button type="button" size="icon" variant="ghost" aria-label="Nueva carpeta" onClick={() => onNewFolder("./nueva-carpeta/.gitkeep")} className="h-6 w-6">
             <Folder className="h-3.5 w-3.5" />
-            Carpeta
+          </Button>
+          <Button type="button" size="icon" variant="ghost" aria-label="Actualizar" onClick={onRefresh} className="h-6 w-6">
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
+      <div className="relative border-b border-border">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-white/30" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="filtrar…"
+          className="ui-mono h-8 w-full bg-transparent pl-8 pr-3 text-xs text-white outline-none placeholder:text-white/25"
+        />
+      </div>
 
-      <div className="min-h-0 flex-1 overflow-auto px-2 py-3 text-sm">
+      <div className="min-h-0 flex-1 overflow-auto px-1.5 py-2 text-[13px]">
         {filtered.length === 0 ? (
           <div className="px-3 py-8 text-center text-xs text-white/30">No hay archivos</div>
         ) : (
@@ -156,7 +150,7 @@ function TreeNode({
       >
         <button type="button" onClick={handlePrimary} className="flex min-w-0 flex-1 items-center gap-2 text-left">
           {isDirectory ? (
-            isExpanded ? <FolderOpen className="h-4 w-4 shrink-0 text-amber-200" /> : <Folder className="h-4 w-4 shrink-0 text-amber-200" />
+            isExpanded ? <FolderOpen className="h-4 w-4 shrink-0 text-nim-yellow/80" /> : <Folder className="h-4 w-4 shrink-0 text-nim-yellow/80" />
           ) : (
             fileIcon(entry.name)
           )}
@@ -165,7 +159,7 @@ function TreeNode({
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
-                entry.gitStatus === "untracked" || entry.gitStatus === "added" ? "bg-emerald-300" : "bg-orange-300"
+                entry.gitStatus === "untracked" || entry.gitStatus === "added" ? "bg-nim-yellow" : "bg-orange-300"
               )}
               title={entry.gitStatus}
             />
@@ -181,7 +175,7 @@ function TreeNode({
         </button>
       </div>
       {menuOpen && (
-        <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
+        <div className="absolute right-2 top-8 z-30 w-44 overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-2xl">
           <MenuButton icon={<Copy className="h-3.5 w-3.5" />} label="Copiar ruta" onClick={() => copyPath(entry.path, setMenuOpen)} />
           <MenuButton icon={<Terminal className="h-3.5 w-3.5" />} label="Abrir terminal" onClick={() => { setMenuOpen(false); onOpenTerminal(entry.path); }} />
           <MenuButton icon={<FileText className="h-3.5 w-3.5" />} label="Renombrar" onClick={() => { setMenuOpen(false); onRename(entry.path); }} />
@@ -226,7 +220,7 @@ function copyPath(path: string, close: (open: boolean) => void) {
 
 function fileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase();
-  if (ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx") return <FileCode2 className="h-4 w-4 shrink-0 text-sky-200" />;
+  if (ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx") return <FileCode2 className="h-4 w-4 shrink-0 text-nim-yellow" />;
   if (ext === "json") return <FileJson className="h-4 w-4 shrink-0 text-yellow-200" />;
   if (ext === "md" || ext === "txt") return <FileText className="h-4 w-4 shrink-0 text-zinc-200" />;
   return <File className="h-4 w-4 shrink-0 text-white/45" />;

@@ -6,6 +6,8 @@ import simpleGit from "simple-git";
 import { createFilesRouter } from "./routes/files";
 import { attachTerminalWebSocket, createTerminalRouter } from "./routes/terminal";
 import { createGitRouter } from "./routes/git";
+import { createMcpRouter } from "./routes/mcp";
+import { McpManager } from "./mcp/manager";
 import { isOriginAllowed, normalizeRoot, safeJsonError, type ProjectState } from "./utils/security";
 
 const PORT = Number(process.env.NIMCHAT_SERVER_PORT ?? 4177);
@@ -73,6 +75,15 @@ app.post("/api/project/open", async (req, res) => {
 app.use("/api/files", createFilesRouter(state));
 app.use("/api/terminal", createTerminalRouter(state));
 app.use("/api/git", createGitRouter(state));
+
+const mcp = new McpManager();
+app.use("/api/mcp", createMcpRouter(mcp));
+mcp.autoConnect();
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => {
+    void mcp.shutdown().finally(() => process.exit(0));
+  });
+}
 
 const watcher = chokidar.watch([], { ignoreInitial: true });
 watcher.on("all", () => {

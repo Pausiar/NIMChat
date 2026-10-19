@@ -43,13 +43,22 @@ export default function TerminosPage() {
         responsabilidad.
       </p>
 
-      <h2>6. Clave de API</h2>
+      <h2>6. Conectores MCP</h2>
+      <p>
+        Los conectores MCP permiten al agente usar servicios y programas de terceros con tus credenciales y tus
+        permisos. Los servidores por comando se ejecutan en tu equipo. Añade solo conectores en los que confíes, revisa
+        qué permisos concedes y no actives las herramientas de escritura si no las necesitas: las acciones que realicen
+        son responsabilidad tuya. Los resultados de un conector son datos externos y pueden ser incorrectos o
+        manipulados.
+      </p>
+
+      <h2>7. Clave de API</h2>
       <p>
         Eres responsable de tu clave y del consumo asociado. No la compartas. Si sospechas que está
         comprometida, revócala en build.nvidia.com.
       </p>
 
-      <h2>7. Limitación de responsabilidad</h2>
+      <h2>8. Limitación de responsabilidad</h2>
       <p>
         El software se ofrece «tal cual», sin garantías (licencia MIT). En la medida permitida por
         la ley, el titular no responde de daños indirectos, pérdida de datos o lucro cesante
@@ -57,13 +66,13 @@ export default function TerminosPage() {
         consumidores ni la responsabilidad por dolo o negligencia grave.
       </p>
 
-      <h2>8. Modificaciones y contacto</h2>
+      <h2>9. Modificaciones y contacto</h2>
       <p>
         Podemos actualizar estos términos; la fecha de última actualización figura arriba. Contacto:{" "}
         <Owner field="contactEmail" label="correo de contacto" />.
       </p>
 
-      <h2>9. Ley aplicable</h2>
+      <h2>10. Ley aplicable</h2>
       <p>Legislación española. Los consumidores conservan el fuero que les reconozca la normativa aplicable.</p>
     </LegalDoc>
   );

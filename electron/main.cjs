@@ -1,7 +1,7 @@
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
-const { app, BrowserWindow, Menu, dialog, shell } = require("electron");
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
 const { startBackends, SERVER_PORT } = require("./runtime.cjs");
 
 const REPO_URL = "https://github.com/Pausiar/NIMChat";
@@ -43,6 +43,7 @@ async function boot() {
   const { webDir, serverFile } = resolveAssets();
   const started = await startBackends({ webDir, serverFile, projectRoot: defaultProjectsDir() });
   uiUrl = started.uiUrl;
+  registerDialogs();
   buildMenu();
   createWindow();
 }
@@ -57,7 +58,12 @@ function createWindow() {
     backgroundColor: "#0a0a0b",
     autoHideMenuBar: false,
     icon: path.join(__dirname, "..", "assets", "icon.png"),
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
   });
 
   // Enlaces externos al navegador; la ventana nunca sale de la app.
@@ -75,6 +81,22 @@ function createWindow() {
     mainWindow = null;
   });
   mainWindow.loadURL(uiUrl);
+}
+
+function registerDialogs() {
+  // Solo responde a nuestra propia interfaz, nunca a otra página cargada en la ventana.
+  const trusted = (event) => Boolean(event.senderFrame && event.senderFrame.url.startsWith(uiUrl));
+  const pick = async (event, options) => {
+    if (!trusted(event)) throw new Error("Origen no permitido");
+    const result = await dialog.showOpenDialog(mainWindow, options);
+    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
+  };
+  ipcMain.handle("dialog:pickFolder", (event) =>
+    pick(event, { title: "Abrir carpeta de proyecto", properties: ["openDirectory", "createDirectory"] })
+  );
+  ipcMain.handle("dialog:pickFile", (event) =>
+    pick(event, { title: "Abrir archivo", properties: ["openFile"] })
+  );
 }
 
 async function openProjectFolder() {

@@ -99,7 +99,7 @@ export function MarkdownRenderer({
             {...props}
             target="_blank"
             rel="noreferrer noopener"
-            className="text-sky-400 underline underline-offset-2 hover:text-sky-300"
+            className="text-nim-yellow underline underline-offset-2 hover:text-nim-yellow"
           >
             {children}
           </a>
@@ -129,7 +129,7 @@ export function MarkdownRenderer({
   return (
     <div
       className={cn(
-        "prose prose-invert max-w-none break-words text-[15px] leading-relaxed prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:mt-4 prose-headings:mb-2",
+        "prose prose-invert max-w-none break-words text-[15px] leading-relaxed prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:mt-4 prose-headings:mb-2 prose-headings:text-white prose-strong:text-white prose-a:text-nim-yellow prose-code:before:content-none prose-code:after:content-none prose-li:my-0.5 prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0",
         className
       )}
     >

@@ -113,7 +113,7 @@ export function SettingsModal({
                 }))
               }
             />
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
               <div>
                 <div className="text-sm text-white">Presupuesto de tokens</div>
                 <p className="mt-1 text-[11px] leading-relaxed text-white/45">
@@ -121,7 +121,7 @@ export function SettingsModal({
                   En Manual usará siempre el valor del slider.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/30 p-1">
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-black/30 p-1">
                 <TokenModeButton
                   active={draft.maxTokensMode === "auto"}
                   onClick={() => setDraft((current) => ({ ...current, maxTokensMode: "auto" }))}
@@ -198,7 +198,7 @@ export function SettingsModal({
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-white text-black hover:bg-white/90"
+              className="bg-nim-yellow text-black hover:bg-nim-yellow/90"
             >
               Guardar
             </Button>
@@ -266,8 +266,8 @@ function TokenModeButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-lg bg-white px-3 py-2 text-sm font-medium text-black"
-          : "rounded-lg px-3 py-2 text-sm font-medium text-white/55 hover:text-white"
+          ? "ui-mono rounded-md bg-nim-yellow px-3 py-1.5 text-xs font-medium text-black"
+          : "ui-mono rounded-md px-3 py-1.5 text-xs text-white/55 hover:text-white"
       }
     >
       {children}

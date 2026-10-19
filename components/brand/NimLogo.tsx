@@ -16,6 +16,7 @@ export function NimLogo({ size = 32, className, priority = false }: NimLogoProps
       width={size}
       height={size}
       priority={priority}
+      unoptimized
       className={cn("shrink-0 object-contain", className)}
     />
   );

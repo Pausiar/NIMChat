@@ -46,15 +46,15 @@ export function DiffViewer({ patch, stat, onCommit, onDiscard, canMutate }: Diff
         {lines.length === 0 ? (
           <div className="flex h-full items-center justify-center text-white/35">No hay cambios en git</div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-white/10">
+          <div className="overflow-hidden rounded-lg border border-white/10">
             {lines.map((line, index) => (
               <div
                 key={`${index}-${line.slice(0, 12)}`}
                 className={cn(
                   "grid grid-cols-[64px_1fr] border-b border-white/[0.03] last:border-b-0",
-                  line.startsWith("+") && !line.startsWith("+++") && "bg-emerald-500/10 text-emerald-100",
+                  line.startsWith("+") && !line.startsWith("+++") && "bg-nim-yellow text-nim-yellow",
                   line.startsWith("-") && !line.startsWith("---") && "bg-red-500/10 text-red-100",
-                  line.startsWith("@@") && "bg-sky-500/10 text-sky-100",
+                  line.startsWith("@@") && "bg-nim-yellow text-nim-yellow",
                   line.startsWith("diff") && "bg-white/[0.05] text-white"
                 )}
               >

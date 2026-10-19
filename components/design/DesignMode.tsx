@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import * as Babel from "@babel/standalone";
-import { AlertCircle, KeyRound, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptPanel } from "./PromptPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -147,7 +147,7 @@ export function DesignMode({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0a0a0b] pb-24 text-white lg:flex-row">
+    <div className="flex h-full min-h-0 flex-col bg-background text-white lg:flex-row">
       <PromptPanel
         prompt={state.currentPrompt}
         onPromptChange={(value) =>
@@ -176,26 +176,8 @@ export function DesignMode({
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {!settings.apiKey && (
-          <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <div className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" />
-              Design Mode usa la misma API key de NVIDIA NIM que el chat.
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onOpenSettings}
-              className="border-amber-500/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 hover:text-white"
-            >
-              Configurar
-            </Button>
-          </div>
-        )}
-
         {error && (
-          <div className="mx-4 mt-4 flex items-start gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <div className="mx-3 mt-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="flex-1">{error}</div>
             <button type="button" onClick={() => setError(null)} className="text-red-100/60 hover:text-white">
@@ -205,18 +187,18 @@ export function DesignMode({
         )}
 
         {state.isGenerating && (livePreview || liveReasoning) && (
-          <div className="mx-4 mt-4 grid gap-3 lg:grid-cols-2">
+          <div className="mx-3 mt-3 grid gap-3 lg:grid-cols-2">
             {liveReasoning && (
-              <div className="flex min-h-[120px] flex-col gap-2 rounded-2xl border border-orange-400/20 bg-orange-500/[0.04] p-3 text-xs text-orange-100/85">
-                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-orange-300/80">
+              <div className="flex min-h-[120px] flex-col gap-2 rounded-md border border-nim-yellow/20 bg-nim-yellow/[0.04] p-3 text-xs text-white/80">
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-nim-yellow">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Razonando
                 </div>
-                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono leading-relaxed text-orange-100/75">{liveReasoning}</pre>
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono leading-relaxed text-white/60">{liveReasoning}</pre>
               </div>
             )}
             {livePreview && (
-              <div className="flex min-h-[120px] flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/80">
+              <div className="flex min-h-[120px] flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-white/80">
                 <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/55">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Generando código
