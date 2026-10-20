@@ -1,17 +1,16 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export function NewChatButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button
+    <button
+      type="button"
       onClick={onClick}
-      variant="outline"
-      className="w-full justify-start gap-2 border-white/10 bg-white/[0.03] text-white hover:bg-white/10"
+      className="ui-mono flex h-8 flex-1 items-center gap-2 rounded-md px-2 text-xs text-nim-yellow transition-colors hover:bg-nim-yellow/10"
     >
-      <Plus className="h-4 w-4" />
-      Nuevo chat
-    </Button>
+      <Plus className="h-3.5 w-3.5" />
+      nuevo chat
+    </button>
   );
 }

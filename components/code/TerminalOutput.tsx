@@ -35,9 +35,9 @@ export function TerminalOutput({ events, onRun, disabled }: TerminalOutputProps)
           <div
             key={group.id}
             className={cn(
-              "rounded-xl border p-3",
+              "rounded-lg border p-3",
               group.source === "agent"
-                ? "border-sky-500/20 bg-sky-500/[0.08]"
+                ? "border-nim-yellow bg-nim-yellow/[0.08]"
                 : "border-white/10 bg-white/[0.035]"
             )}
           >
@@ -49,7 +49,7 @@ export function TerminalOutput({ events, onRun, disabled }: TerminalOutputProps)
               {renderAnsi(group.output || "")}
             </pre>
             {group.exitCode != null && (
-              <div className={cn("mt-2 text-[11px]", group.exitCode === 0 ? "text-emerald-300" : "text-red-300")}>
+              <div className={cn("mt-2 text-[11px]", group.exitCode === 0 ? "text-nim-yellow" : "text-red-300")}>
                 exit {group.exitCode}
               </div>
             )}
@@ -74,7 +74,7 @@ export function TerminalOutput({ events, onRun, disabled }: TerminalOutputProps)
           placeholder="npm run build"
           className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/25 px-3 font-mono text-sm text-white outline-none placeholder:text-white/25 focus:border-white/25"
         />
-        <Button type="submit" size="sm" disabled={!command.trim() || disabled} className="h-10 bg-white text-black hover:bg-white/90">
+        <Button type="submit" size="sm" disabled={!command.trim() || disabled} className="h-10 bg-nim-yellow text-black hover:bg-nim-yellow/90">
           <Play className="h-4 w-4" />
           Ejecutar
         </Button>

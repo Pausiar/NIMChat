@@ -1,14 +1,12 @@
 "use client";
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Menu, KeyRound, Settings as SettingsIcon } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { SettingsModal } from "@/components/settings/SettingsModal";
-import { NimLogo } from "@/components/brand/NimLogo";
-import { ModeDock, type AppMode } from "@/components/dock/ModeDock";
-import { Button } from "@/components/ui/button";
+import { TopBar, type AppMode } from "@/components/shell/TopBar";
 import {
   AppSettings,
   Chat,
@@ -40,12 +38,6 @@ const CodeMode = lazy(() =>
   }))
 );
 
-const ImageModePlaceholder = lazy(() =>
-  import("@/components/image/ImageModePlaceholder").then((mod) => ({
-    default: mod.ImageModePlaceholder,
-  }))
-);
-
 const ACTIVE_MODE_KEY = "nimchat:active-mode";
 
 const DEFAULT_DESIGN_STATE: DesignState = {
@@ -61,8 +53,7 @@ function isAppMode(value: string | null): value is AppMode {
   return (
     value === "chat" ||
     value === "design" ||
-    value === "code" ||
-    value === "image"
+    value === "code"
   );
 }
 
@@ -299,7 +290,7 @@ export default function HomePage() {
 
   if (!hydrated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0a0a0b] text-white/40">
+      <div className="flex h-screen items-center justify-center bg-background text-white/40">
         Cargando...
       </div>
     );
@@ -311,116 +302,54 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-[#0a0a0b]">
-      {activeMode === "chat" && (
-        <>
-          <Sidebar
-            chats={chats}
-            activeChatId={activeId}
-            onNewChat={handleNewChat}
-            onSelect={(id) => setActiveId(id)}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            onOpenSettings={() => setSettingsOpen(true)}
-            open={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <TopBar
+        activeMode={activeMode}
+        onModeChange={handleModeChange}
+        modelName={modelInfo.name}
+        hasApiKey={Boolean(settings.apiKey)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onToggleSidebar={activeMode === "chat" ? () => setSidebarOpen(true) : undefined}
+      />
 
-          <main className="lab-bg relative flex min-w-0 flex-1 flex-col pb-24">
-            <header className="z-10 flex items-center justify-between border-b border-white/5 bg-[#0a0a0b]/80 px-3 py-2 backdrop-blur md:px-6">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(true)}
-                  className="rounded p-1.5 text-white/70 hover:bg-white/5 md:hidden"
-                  aria-label="Abrir sidebar"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                <NimLogo
-                  size={24}
-                  className="h-6 w-6 drop-shadow-[0_0_10px_rgba(250,204,21,0.2)]"
-                />
-                <div className="text-sm">
-                  <div className="font-medium text-white">
-                    {activeChat?.title ?? "NimChat"}
-                  </div>
-                  <div className="text-xs text-white/40">
-                    {modelInfo.provider} · {modelInfo.name}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                {!settings.apiKey && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSettingsOpen(true)}
-                    className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
+      <div className="flex min-h-0 flex-1">
+        {activeMode === "chat" && (
+          <>
+            <Sidebar
+              chats={chats}
+              activeChatId={activeId}
+              onNewChat={handleNewChat}
+              onSelect={(id) => setActiveId(id)}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              open={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
+
+            <main className="relative flex min-w-0 flex-1 flex-col">
+              {error && (
+                <div className="mx-auto mt-3 flex w-full max-w-3xl items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="flex-1">{error}</div>
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="text-red-300/70 hover:text-white"
+                    aria-label="Cerrar error"
                   >
-                    <KeyRound className="h-3.5 w-3.5" />
-                    Configurar API key
-                  </Button>
-                )}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setSettingsOpen(true)}
-                  className="text-white/60 hover:text-white"
-                  aria-label="Ajustes"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                </Button>
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <ChatWindow
+                  messages={activeChat?.messages ?? []}
+                  isStreaming={isStreaming}
+                  streamingMessageId={streamingMessageId}
+                />
               </div>
-            </header>
 
-            {!settings.apiKey && (
-              <div className="z-10 mx-auto mt-3 w-full max-w-3xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100">
-                Necesitas una API key gratuita de NVIDIA NIM para empezar.{" "}
-                <a
-                  href="https://build.nvidia.com"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline underline-offset-2 hover:text-white"
-                >
-                  Consíguela aquí
-                </a>{" "}
-                y pégala en{" "}
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(true)}
-                  className="underline underline-offset-2 hover:text-white"
-                >
-                  Ajustes
-                </button>
-                .
-              </div>
-            )}
-
-            {error && (
-              <div className="z-10 mx-auto mt-3 flex w-full max-w-3xl items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-200">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="flex-1">{error}</div>
-                <button
-                  type="button"
-                  onClick={() => setError(null)}
-                  className="text-red-300/70 hover:text-white"
-                  aria-label="Cerrar error"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
-              <ChatWindow
-                messages={activeChat?.messages ?? []}
-                isStreaming={isStreaming}
-                streamingMessageId={streamingMessageId}
-              />
-            </div>
-
-            <div className="relative z-10">
               <ChatInput
                 value={input}
                 onChange={setInput}
@@ -430,44 +359,38 @@ export default function HomePage() {
                 selectedModel={currentModel}
                 onModelChange={handleModelChange}
               />
-            </div>
+            </main>
+          </>
+        )}
+
+        {activeMode === "design" && (
+          <main className="min-w-0 flex-1">
+            <Suspense fallback={<ModeFallback label="Cargando Design…" />}>
+              <DesignMode
+                state={designState}
+                onStateChange={setDesignState}
+                settings={settings}
+                onModelChange={(id) =>
+                  setSettings((current) => ({ ...current, selectedModel: id }))
+                }
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+            </Suspense>
           </main>
-        </>
-      )}
+        )}
 
-      {activeMode === "design" && (
-        <main className="min-w-0 flex-1">
-          <Suspense fallback={<ModeFallback label="Cargando Design Mode..." />}>
-            <DesignMode
-              state={designState}
-              onStateChange={setDesignState}
-              settings={settings}
-              onModelChange={(id) =>
-                setSettings((current) => ({ ...current, selectedModel: id }))
-              }
-              onOpenSettings={() => setSettingsOpen(true)}
-            />
-          </Suspense>
-        </main>
-      )}
-
-      {activeMode === "code" && (
-        <main className="min-w-0 flex-1">
-          <Suspense fallback={<ModeFallback label="Cargando Code Mode..." />}>
-            <CodeMode settings={settings} onOpenSettings={() => setSettingsOpen(true)} />
-          </Suspense>
-        </main>
-      )}
-
-      {activeMode === "image" && (
-        <main className="min-w-0 flex-1">
-          <Suspense fallback={<ModeFallback label="Cargando Image..." />}>
-            <ImageModePlaceholder onBack={() => handleModeChange("chat")} />
-          </Suspense>
-        </main>
-      )}
-
-      <ModeDock activeMode={activeMode} onModeChange={handleModeChange} />
+        {activeMode === "code" && (
+          <main className="min-w-0 flex-1">
+            <Suspense fallback={<ModeFallback label="Cargando Code…" />}>
+              <CodeMode
+                settings={settings}
+                onOpenSettings={() => setSettingsOpen(true)}
+                onModelChange={(id) => setSettings((current) => ({ ...current, selectedModel: id }))}
+              />
+            </Suspense>
+          </main>
+        )}
+      </div>
 
       <SettingsModal
         open={settingsOpen}
@@ -481,7 +404,7 @@ export default function HomePage() {
 
 function ModeFallback({ label }: { label: string }) {
   return (
-    <div className="flex h-full items-center justify-center bg-[#0a0a0b] pb-24 text-sm text-white/45">
+    <div className="ui-mono flex h-full items-center justify-center bg-background text-xs text-white/40">
       {label}
     </div>
   );

@@ -1,12 +1,10 @@
 "use client";
 
-import { Settings, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Chat } from "@/lib/chat-storage";
 import { NewChatButton } from "./NewChatButton";
 import { ChatList } from "./ChatList";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { NimLogo } from "@/components/brand/NimLogo";
 
 interface SidebarProps {
   chats: Chat[];
@@ -15,7 +13,6 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
-  onOpenSettings: () => void;
   open: boolean;
   onClose: () => void;
 }
@@ -27,7 +24,6 @@ export function Sidebar({
   onSelect,
   onRename,
   onDelete,
-  onOpenSettings,
   open,
   onClose,
 }: SidebarProps) {
@@ -35,45 +31,35 @@ export function Sidebar({
     <>
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/60 md:hidden"
           onClick={onClose}
           aria-hidden
         />
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/5 bg-[#111113] transition-transform md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-[#0b0b0b] transition-transform md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between border-b border-white/5 px-3 py-3">
-          <div className="flex items-center gap-2">
-            <NimLogo
-              size={32}
-              className="h-8 w-8 drop-shadow-[0_0_12px_rgba(250,204,21,0.22)]"
-            />
-            <span className="text-sm font-semibold text-white">NimChat</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 text-white/60 hover:bg-white/5 md:hidden"
-            aria-label="Cerrar sidebar"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="px-3 py-3">
+        <div className="flex items-center justify-between px-2 pt-2">
           <NewChatButton
             onClick={() => {
               onNewChat();
               onClose();
             }}
           />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-white/60 hover:bg-white/5 md:hidden"
+            aria-label="Cerrar conversaciones"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="px-2 text-[11px] font-semibold uppercase tracking-wider text-white/30">
+        <div className="ui-mono px-3 pb-1 pt-4 text-[10px] uppercase tracking-wider text-white/30">
           Conversaciones
         </div>
 
@@ -88,17 +74,6 @@ export function Sidebar({
             onRename={onRename}
             onDelete={onDelete}
           />
-        </div>
-
-        <div className="border-t border-white/5 p-3">
-          <Button
-            variant="ghost"
-            onClick={onOpenSettings}
-            className="w-full justify-start gap-2 text-white/70 hover:bg-white/5 hover:text-white"
-          >
-            <Settings className="h-4 w-4" />
-            Ajustes
-          </Button>
         </div>
       </aside>
     </>

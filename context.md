@@ -115,3 +115,20 @@ Páginas en `app/legal/*` (aviso legal, privacidad, términos, almacenamiento lo
 - El servidor de Code usa el puerto fijo 4177 (la interfaz lo tiene como URL por defecto); la web usa el primer puerto libre desde 4178.
 - El servidor local solo acepta peticiones sin `Origin` (la app) o de los orígenes en `NIMCHAT_ALLOWED_ORIGINS` (por defecto `localhost:3000`). Esto impide que una web ajena ejecute comandos vía localhost.
 - CI: `.github/workflows/desktop-release.yml` construye el `.exe` en Windows y lo adjunta al release.
+
+## Interfaz (v1.0)
+
+- Estilo «terminal»: negro neutro, amarillo `#facc15` solo para acciones principales y estados activos, tipografía monoespaciada (`.ui-mono`) para la interfaz y sans para el contenido. Una única barra superior (`components/shell/TopBar.tsx`) con los modos chat · design · code; sin dock flotante.
+- Selector de modelos compartido: `components/shared/ModelPicker.tsx` (con búsqueda y catálogo en vivo).
+
+## Conectores MCP
+
+- `server/mcp/manager.ts` (SDK oficial `@modelcontextprotocol/sdk`): conexión stdio/http(SSE de respaldo), configuración en `~/.nimchat/mcp.json` (0600), secretos enmascarados hacia la UI y conservados al editar.
+- `server/routes/mcp.ts` → `/api/mcp/{servers,tools,call}`. `allowWrites=false` por defecto: solo herramientas con `readOnlyHint`.
+- `lib/agent-loop.ts` añade las herramientas MCP como `mcp__<servidor>__<herramienta>` al agente, orquestador y subagentes.
+- UI: `components/code/ConnectorsDialog.tsx` (plantillas GitHub, Archivos, PostgreSQL, Brave, Memoria).
+
+## Abrir carpetas/archivos
+
+- `electron/preload.cjs` expone `window.nimchatDesktop.{pickFolder,pickFile}` (IPC validado por origen). `lib/desktop.ts` lo consume; sin Electron se pide la ruta en un diálogo de texto.
+- `components/code/ProjectMenu.tsx` + `lib/recent-projects.ts` (recientes en localStorage). Al cambiar de proyecto se limpia la tarea/acciones del anterior.

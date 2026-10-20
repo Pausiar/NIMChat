@@ -68,14 +68,14 @@ export function CodeEditor({ code, onCodeChange }: CodeEditorProps) {
 
   if (!code) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/20 p-8 text-center text-sm text-white/40">
+      <div className="flex h-full min-h-[320px] items-center justify-center rounded-lg border border-dashed border-white/10 bg-black/20 p-8 text-center text-sm text-white/40">
         El código generado aparecerá aquí.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-2xl border border-white/10 bg-[#0d0d10]">
+    <div className="flex h-full min-h-0 flex-col rounded-lg border border-white/10 bg-[#0d0d10]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
         <div className="text-xs text-white/45">
           {editable ? "Editando con preview debounced" : "Solo lectura"}

@@ -10,6 +10,7 @@ const ITEMS = [
   ["nimchat:active-chat", "Último chat abierto", "Hasta que lo borres"],
   ["nimchat:active-mode", "Último modo abierto (Chat, Design, Code)", "Hasta que lo borres"],
   ["nimchat:code:state:<proyecto>", "Tarea y acciones del agente Code por proyecto", "Hasta que lo borres"],
+  ["nimchat:recent-projects", "Proyectos abiertos recientemente (Code)", "Hasta que lo borres"],
   ["nimchat:model-catalog", "Caché de la lista de modelos", "1 hora (se renueva sola)"],
   ["Service worker / caché", "Interfaz disponible sin conexión (instalación como app)", "Hasta que se actualice o desinstales la app"],
 ];

@@ -21,7 +21,7 @@ export function ApiKeyInput({ value, onChange }: ApiKeyInputProps) {
           href="https://build.nvidia.com"
           target="_blank"
           rel="noreferrer noopener"
-          className="flex items-center gap-1 text-xs text-sky-400 hover:underline"
+          className="flex items-center gap-1 text-xs text-nim-yellow hover:underline"
         >
           Obtener gratis
           <ExternalLink className="h-3 w-3" />

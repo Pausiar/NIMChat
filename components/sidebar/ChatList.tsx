@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Trash2, Check, X } from "lucide-react";
+import { Trash2, Check, X } from "lucide-react";
 import { Chat } from "@/lib/chat-storage";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,7 @@ export function ChatList({
   };
 
   return (
-    <div className="flex flex-col gap-1 overflow-y-auto py-2">
+    <div className="flex flex-col gap-0.5 overflow-y-auto py-1">
       <AnimatePresence initial={false}>
         {sorted.map((chat) => {
           const isActive = chat.id === activeChatId;
@@ -55,13 +55,12 @@ export function ChatList({
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.15 }}
               className={cn(
-                "group flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                "group flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-[13px] transition-colors",
                 isActive
-                  ? "bg-white/10 text-white"
-                  : "text-white/70 hover:bg-white/5"
+                  ? "border-nim-yellow bg-white/5 text-white"
+                  : "border-transparent text-white/60 hover:bg-white/5 hover:text-white"
               )}
             >
-              <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
               {isEditing ? (
                 <input
                   autoFocus

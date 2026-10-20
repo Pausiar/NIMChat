@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bot, Copy, Check, User } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Message } from "@/lib/chat-storage";
-import { cn } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { getModel } from "@/lib/models";
 
@@ -28,18 +27,19 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="group flex max-w-[80%] flex-col items-end gap-1">
-          <div className="rounded-2xl rounded-br-md bg-[#1e1e2e] px-4 py-2.5 text-[15px] text-white whitespace-pre-wrap">
+      <div className="group flex gap-3">
+        <span className="ui-mono mt-px select-none text-nim-yellow">&gt;</span>
+        <div className="min-w-0 flex-1">
+          <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-white">
             {message.content}
           </div>
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1 text-xs text-white/40 opacity-0 transition-opacity hover:text-white/80 group-hover:opacity-100"
+            className="ui-mono mt-1 flex items-center gap-1 text-[11px] text-white/35 opacity-0 transition-opacity hover:text-white/80 group-hover:opacity-100"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copiado" : "Copiar"}
+            {copied ? "copiado" : "copiar"}
           </button>
         </div>
       </div>
@@ -50,35 +50,28 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 
   return (
     <div className="group flex gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
-        <Bot className="h-4 w-4 text-white/70" />
-      </div>
+      <span className="ui-mono mt-0.5 select-none text-nim-yellow">●</span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {modelInfo && (
-          <div className="text-xs text-white/40">
-            {modelInfo.provider} · {modelInfo.name}
-          </div>
+          <div className="ui-mono text-[11px] text-white/30">{modelInfo.name}</div>
         )}
         <div className="relative">
           <MarkdownRenderer content={message.content || (isStreaming ? "​" : "")} />
           {isStreaming && (
-            <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-white/60 align-middle" />
+            <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-nim-yellow/80 align-middle" />
           )}
         </div>
         {!isStreaming && message.content && (
           <button
             type="button"
             onClick={handleCopy}
-            className="mt-1 flex w-fit items-center gap-1 text-xs text-white/40 opacity-0 transition-opacity hover:text-white/80 group-hover:opacity-100"
+            className="ui-mono mt-1 flex w-fit items-center gap-1 text-[11px] text-white/35 opacity-0 transition-opacity hover:text-white/80 group-hover:opacity-100"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copiado" : "Copiar respuesta"}
+            {copied ? "copiado" : "copiar respuesta"}
           </button>
         )}
       </div>
     </div>
   );
 }
-
-// Avoid unused-import warning when User is referenced elsewhere
-export const _user = User;

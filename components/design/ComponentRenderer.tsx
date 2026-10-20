@@ -82,7 +82,7 @@ export function ComponentRenderer({
 
   if (!code.trim()) {
     return (
-      <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/20 p-8 text-center">
+      <div className="flex h-full min-h-[420px] items-center justify-center rounded-lg border border-dashed border-white/10 bg-black/20 p-8 text-center">
         <div>
           <RefreshCw className={cn("mx-auto mb-3 h-7 w-7 text-white/25", isGenerating && "animate-spin")} />
           <p className="text-sm font-medium text-white/65">
@@ -100,8 +100,8 @@ export function ComponentRenderer({
 
   if (compiled.error && isGenerating) {
     return (
-      <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-white/10 bg-black/20 p-8 text-center">
-        <div className="h-28 w-full max-w-sm animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+      <div className="flex h-full min-h-[420px] items-center justify-center rounded-lg border border-white/10 bg-black/20 p-8 text-center">
+        <div className="h-28 w-full max-w-sm animate-pulse rounded-lg border border-white/10 bg-white/5" />
       </div>
     );
   }
@@ -111,16 +111,16 @@ export function ComponentRenderer({
   }
 
   return (
-    <div className={cn("relative h-full min-h-[420px] overflow-auto rounded-2xl p-4", backgroundClass[background])}>
+    <div className={cn("relative h-full min-h-[420px] overflow-auto rounded-lg p-4", backgroundClass[background])}>
       {isGenerating && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm">
           <div className="rounded-full border border-white/15 bg-zinc-950/80 px-4 py-2 text-sm text-white/70">
             Generando interfaz...
           </div>
         </div>
       )}
       {runtimeError && <RenderError message={runtimeError} floating />}
-      <div className={cn("mx-auto h-full min-h-[560px] overflow-hidden rounded-xl shadow-2xl transition-all", viewportClass[viewport])}>
+      <div className={cn("mx-auto h-full min-h-[560px] overflow-hidden rounded-lg shadow-2xl transition-all", viewportClass[viewport])}>
         <iframe
           key={`${refreshKey}-${compiled.source.length}`}
           title="Preview del componente generado"
@@ -138,7 +138,7 @@ function RenderError({ message, floating }: { message: string; floating?: boolea
   return (
     <div
       className={cn(
-        "rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100",
+        "rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100",
         floating && "absolute left-6 right-6 top-6 z-20 backdrop-blur"
       )}
     >

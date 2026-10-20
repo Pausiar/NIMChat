@@ -24,6 +24,18 @@ Una interfaz web local, moderna y funcional para los mejores modelos open‑sour
 
 ---
 
+## 🔌 Conectores MCP
+
+En el modo **Code** (botón *conectores*) puedes añadir servidores [MCP](https://modelcontextprotocol.io) por comando local (stdio) o por URL (http): GitHub, bases de datos PostgreSQL, sistema de archivos, Brave Search, memoria o cualquier otro. El agente (y los subagentes) usan sus herramientas como `mcp__<conector>__<herramienta>`.
+
+- Por defecto solo se ofrecen las herramientas marcadas como **solo lectura**; las de escritura hay que permitirlas por conector.
+- La configuración (con tus claves) se guarda en `~/.nimchat/mcp.json` con permisos solo para tu usuario.
+- Los conectores por comando (`npx …`) necesitan Node.js instalado; los remotos (URL) no.
+
+## 📂 Abrir proyectos y archivos
+
+En Code, el selector de proyecto (arriba a la izquierda) abre **carpetas y archivos** con el explorador de Windows (app de escritorio) y recuerda los proyectos recientes.
+
 ## 🖥️ App de escritorio (Windows)
 
 Descarga `NimChat-Setup-x.y.z.exe` desde [Releases](https://github.com/Pausiar/NIMChat/releases/latest) e instálala. Incluye la interfaz y el servidor local de Code: no hay que arrancar nada a mano. Los proyectos por defecto viven en `Documentos/NimChat Projects` y puedes abrir otra carpeta con **Archivo → Abrir carpeta de proyecto**.

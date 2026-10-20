@@ -69,39 +69,38 @@ export function PreviewPanel({
   };
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-[#0a0a0b] p-4">
-      <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
-        <div className="flex rounded-xl border border-white/10 bg-black/30 p-1">
+    <section className="flex min-h-0 flex-1 flex-col bg-background">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-border px-2">
+        <div className="ui-mono flex h-full items-stretch">
           <TabButton active={activeTab === "preview"} onClick={() => onTabChange("preview")}>
-            Preview
+            vista previa
           </TabButton>
           <TabButton active={activeTab === "code"} onClick={() => onTabChange("code")}>
-            Code
+            código
           </TabButton>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {activeTab === "preview" && (
+            <>
+              <Segmented items={backgrounds} value={background} onChange={onBackgroundChange} />
+              <Segmented items={viewports} value={viewport} onChange={onViewportChange} />
+            </>
+          )}
           <Button
             type="button"
             size="sm"
             variant="ghost"
             onClick={handleDownloadHtml}
             disabled={!code.trim() || isGenerating}
-            className="h-8 gap-1.5 rounded-lg px-2 text-xs text-white/70 hover:bg-white/5 hover:text-white"
             aria-label="Descargar diseño como HTML"
             title="Descargar como HTML autónomo"
+            className="ui-mono"
           >
             <Download className="h-3.5 w-3.5" />
-            HTML
+            html
           </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={onRefresh}
-            className="h-8 w-8 text-white/60 hover:text-white"
-            aria-label="Refrescar preview"
-          >
-            <RefreshCw className="h-4 w-4" />
+          <Button type="button" size="icon" variant="ghost" onClick={onRefresh} aria-label="Refrescar vista previa">
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -119,33 +118,6 @@ export function PreviewPanel({
           <CodeEditor code={code} onCodeChange={onCodeChange} />
         )}
       </div>
-
-      {activeTab === "preview" && (
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1">
-            {backgrounds.map((item) => (
-              <SmallButton
-                key={item.id}
-                active={background === item.id}
-                onClick={() => onBackgroundChange(item.id)}
-              >
-                {item.label}
-              </SmallButton>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1">
-            {viewports.map((item) => (
-              <SmallButton
-                key={item.id}
-                active={viewport === item.id}
-                onClick={() => onViewportChange(item.id)}
-              >
-                {item.label}
-              </SmallButton>
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -164,34 +136,40 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-lg px-3 py-1.5 text-sm transition",
-        active ? "bg-white text-black" : "text-white/55 hover:text-white"
+        "relative px-3 text-xs transition-colors",
+        active ? "text-white" : "text-white/45 hover:text-white"
       )}
     >
       {children}
+      {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-nim-yellow" />}
     </button>
   );
 }
 
-function SmallButton({
-  active,
-  onClick,
-  children,
+function Segmented<T extends string>({
+  items,
+  value,
+  onChange,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  items: { id: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-lg px-2.5 py-1 text-xs transition",
-        active ? "bg-white text-black" : "text-white/45 hover:text-white"
-      )}
-    >
-      {children}
-    </button>
+    <div className="ui-mono hidden items-center gap-px rounded-md border border-border p-0.5 md:flex">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className={cn(
+            "rounded px-2 py-0.5 text-[11px] transition-colors",
+            value === item.id ? "bg-nim-yellow text-black" : "text-white/45 hover:text-white"
+          )}
+        >
+          {item.label.toLowerCase()}
+        </button>
+      ))}
+    </div>
   );
 }

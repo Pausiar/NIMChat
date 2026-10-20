@@ -26,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="dark">
-      <body className="min-h-screen bg-[#0a0a0b] text-white antialiased">
+      <body className="min-h-screen bg-background text-white antialiased">
         {children}
         <ServiceWorkerRegister />
       </body>

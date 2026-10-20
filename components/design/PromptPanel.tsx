@@ -1,9 +1,8 @@
 "use client";
 
-import { Loader2, WandSparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ModelSelector } from "@/components/settings/ModelSelector";
+import { ModelPicker } from "@/components/shared/ModelPicker";
 import { GenerationHistory } from "./GenerationHistory";
 import type { DesignGeneration } from "./types";
 
@@ -37,20 +36,7 @@ export function PromptPanel({
   const canSubmit = prompt.trim().length > 0 && !isGenerating;
 
   return (
-    <aside className="flex min-h-0 flex-col gap-4 border-r border-white/10 bg-[#0d0d10]/90 p-4 lg:w-[40%]">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.28em] text-orange-300/70">
-          NimChat Design
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">
-          Genera interfaces con NVIDIA NIM
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-white/50">
-          Describe un componente y el modelo devolverá React + Tailwind listo
-          para copiar en un proyecto Next.js.
-        </p>
-      </div>
-
+    <aside className="flex min-h-0 flex-col border-r border-border bg-[#0b0b0b] lg:w-[340px] lg:shrink-0">
       <GenerationHistory
         history={history}
         activeId={activeGenerationId}
@@ -58,43 +44,45 @@ export function PromptPanel({
         onClear={onClearHistory}
       />
 
-      <div className="rounded-2xl border border-white/10 bg-[#141418] p-3 shadow-xl">
-        <Textarea
-          value={prompt}
-          onChange={(event) => onPromptChange(event.target.value)}
-          placeholder="Describe el componente que quieres generar... (ej: 'Un dashboard card con métricas de ventas, gráfico de línea y badge de porcentaje')"
-          className="min-h-[96px] resize-y border-white/10 bg-black/20 text-sm leading-relaxed text-white placeholder:text-white/30 focus-visible:ring-orange-400/40"
-          disabled={isGenerating}
-        />
-
-        <div className="mt-3">
-          <ModelSelector value={selectedModel} onChange={onModelChange} />
+      <div className="border-t border-border p-2">
+        <div className="rounded-md border border-border bg-[#101010] transition-colors focus-within:border-nim-yellow/50">
+          <div className="flex items-start gap-2 px-2.5 pt-2.5">
+            <span className="ui-mono select-none pt-px text-nim-yellow">&gt;</span>
+            <textarea
+              value={prompt}
+              onChange={(event) => onPromptChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && canSubmit) {
+                  event.preventDefault();
+                  onGenerate("generate");
+                }
+              }}
+              placeholder="Describe el componente: una tarjeta de métricas con gráfico y porcentaje…"
+              rows={4}
+              disabled={isGenerating}
+              className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-white outline-none placeholder:text-white/25"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2 px-1.5 py-1.5">
+            <ModelPicker value={selectedModel} onChange={onModelChange} side="top" />
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onGenerate("refine")}
+                disabled={!canSubmit || !canRefine}
+              >
+                Refinar
+              </Button>
+              <Button type="button" size="sm" onClick={() => onGenerate("generate")} disabled={!canSubmit}>
+                {isGenerating && <Loader2 className="h-3 w-3 animate-spin" />}
+                Generar
+              </Button>
+            </div>
+          </div>
         </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            onClick={() => onGenerate("generate")}
-            disabled={!canSubmit}
-            className="gap-2 bg-white text-black hover:bg-white/90 disabled:opacity-40"
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <WandSparkles className="h-4 w-4" />
-            )}
-            Generar
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onGenerate("refine")}
-            disabled={!canSubmit || !canRefine}
-            className="gap-2 border-orange-400/30 bg-orange-500/10 text-orange-100 hover:bg-orange-500/20 hover:text-white disabled:opacity-30"
-          >
-            Refinar
-          </Button>
-        </div>
+        <p className="ui-mono mt-1.5 text-center text-[10px] text-white/25">ctrl + enter para generar</p>
       </div>
     </aside>
   );

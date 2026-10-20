@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, FolderOpen, GitBranch, KeyRound, Loader2, PlugZap, RefreshCw } from "lucide-react";
+import { AlertTriangle, GitBranch, Loader2, Plug, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AppSettings } from "@/lib/chat-storage";
 import { NimChatServerClient, DEFAULT_LOCAL_SERVER_URL, type FileEntry, type ProjectInfo, type ReadFileResult, type TerminalEvent } from "@/lib/server-client";
@@ -9,20 +9,24 @@ import { runAgentLoop } from "@/lib/agent-loop";
 import type { AgentAction } from "@/lib/tools";
 import { wantsAgents, type AgentInfo, type AgentMessageEvent } from "@/lib/agents";
 import { useModelCatalog } from "@/lib/use-model-catalog";
-import { getModel } from "@/lib/models";
 import { resolveMaxTokens } from "@/lib/token-policy";
 import { FileExplorer } from "./FileExplorer";
 import { CodeEditor, type CodeCenterTab } from "./CodeEditor";
 import { AgentPanel } from "./AgentPanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TextPromptDialog } from "./TextPromptDialog";
+import { ProjectMenu } from "./ProjectMenu";
+import { ConnectorsDialog } from "./ConnectorsDialog";
+import { getDesktop, splitPath } from "@/lib/desktop";
+import { loadRecentProjects, rememberProject, type RecentProject } from "@/lib/recent-projects";
 
 interface CodeModeProps {
   settings: AppSettings;
   onOpenSettings: () => void;
+  onModelChange: (id: string) => void;
 }
 
-export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
+export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModeProps) {
   const [serverUrl] = useState(DEFAULT_LOCAL_SERVER_URL);
   const client = useMemo(() => new NimChatServerClient(serverUrl), [serverUrl]);
   const [connected, setConnected] = useState(false);
@@ -53,6 +57,9 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
     onConfirm: (value: string) => void | Promise<void>;
   } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [recents, setRecents] = useState<RecentProject[]>([]);
+  const [connectorsOpen, setConnectorsOpen] = useState(false);
+  const [connectedConnectors, setConnectedConnectors] = useState(0);
 
   const refreshProject = useCallback(async () => {
     try {
@@ -64,6 +71,10 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
         client.gitDiff().catch(() => ({ diff: "", patch: "" })),
       ]);
       setProjectInfo(info);
+      client
+        .listMcpServers()
+        .then((list) => setConnectedConnectors(list.filter((server) => server.status === "connected").length))
+        .catch(() => undefined);
       setEntries(tree.entries);
       setGitStat(diff.diff);
       setGitPatch(diff.patch);
@@ -77,6 +88,14 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
   useEffect(() => {
     refreshProject();
   }, [refreshProject]);
+
+  useEffect(() => {
+    setRecents(loadRecentProjects());
+  }, []);
+
+  useEffect(() => {
+    if (projectInfo?.path) setRecents(rememberProject({ path: projectInfo.path, name: projectInfo.name }));
+  }, [projectInfo?.path, projectInfo?.name]);
 
   // Restaurar estado del Code Mode (tarea, acciones, summary) por proyecto.
   useEffect(() => {
@@ -141,24 +160,71 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
     }
   };
 
-  const openProject = () => {
+  /** Cambia de proyecto sin arrastrar la tarea ni las acciones del anterior. */
+  const switchProject = async (dir: string) => {
+    try {
+      await client.openProject(dir);
+      setProjectInfo(null);
+      setRestored(false);
+      setSelectedFile(null);
+      setTask("");
+      setActions([]);
+      setSummary(undefined);
+      setAgents([]);
+      setAgentMessages([]);
+      setTerminalEvents([]);
+      await refreshProject();
+      return true;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo abrir el proyecto.");
+      return false;
+    }
+  };
+
+  const askForPath = (title: string, label: string, onPath: (value: string) => void) => {
     setPendingTextPrompt({
-      title: "Abrir proyecto",
-      description: "Introduce la ruta absoluta del proyecto que debe controlar el servidor local.",
-      label: "Ruta del proyecto",
+      title,
+      description: "Introduce la ruta absoluta.",
+      label,
       initialValue: projectInfo?.path ?? "",
       confirmLabel: "Abrir",
-      onConfirm: async (nextPath) => {
+      onConfirm: (value) => {
         setPendingTextPrompt(null);
-        try {
-          await client.openProject(nextPath);
-          setSelectedFile(null);
-          await refreshProject();
-        } catch (cause) {
-          setError(cause instanceof Error ? cause.message : "No se pudo abrir el proyecto.");
-        }
+        onPath(value.trim());
       },
     });
+  };
+
+  const openFolder = async () => {
+    const desktop = getDesktop();
+    if (desktop) {
+      const dir = await desktop.pickFolder();
+      if (dir) await switchProject(dir);
+      return;
+    }
+    askForPath("Abrir carpeta", "Ruta de la carpeta", (value) => void switchProject(value));
+  };
+
+  const openFileFromDisk = async () => {
+    const handle = async (fullPath: string) => {
+      if (!fullPath) return;
+      const root = projectInfo?.path ?? "";
+      const normalize = (value: string) => value.replace(/\\/g, "/");
+      if (root && normalize(fullPath).startsWith(`${normalize(root).replace(/\/$/, "")}/`)) {
+        await openFile(normalize(fullPath).slice(normalize(root).replace(/\/$/, "").length + 1));
+        return;
+      }
+      // Fuera del proyecto actual: se abre su carpeta como proyecto.
+      const { dir, base } = splitPath(fullPath);
+      if (await switchProject(dir)) await openFile(base);
+    };
+    const desktop = getDesktop();
+    if (desktop) {
+      const picked = await desktop.pickFile();
+      if (picked) await handle(picked);
+      return;
+    }
+    askForPath("Abrir archivo", "Ruta del archivo", (value) => void handle(value));
   };
 
   const createFile = (path: string) => {
@@ -348,48 +414,43 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
     });
   };
 
-  const model = getModel(settings.selectedModel);
-
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0a0a0b] pb-24 text-white">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#0c0c0f]/95 px-4 backdrop-blur">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
-            <PlugZap className="h-4 w-4 text-emerald-300" />
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-white">{projectInfo?.name ?? "NimChat Code"}</div>
-            <div className="flex items-center gap-2 text-xs text-white/40">
-              <span className={connected ? "text-emerald-300" : "text-red-300"}>{connected ? "server online" : "server offline"}</span>
-              {projectInfo?.branch && (
-                <span className="inline-flex items-center gap-1"><GitBranch className="h-3 w-3" /> {projectInfo.branch}</span>
-              )}
-              <span>{model.name}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {!settings.apiKey && (
-            <Button type="button" size="sm" variant="outline" onClick={onOpenSettings} className="border-amber-500/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 hover:text-white">
-              <KeyRound className="h-3.5 w-3.5" />
-              API key
-            </Button>
+    <div className="flex h-full min-h-0 flex-col bg-background text-white">
+      <header className="flex h-10 shrink-0 items-center justify-between border-b border-border px-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <ProjectMenu
+            projectName={projectInfo?.name ?? "sin proyecto"}
+            recents={recents}
+            onOpenFolder={openFolder}
+            onOpenFile={openFileFromDisk}
+            onOpenRecent={(project) => void switchProject(project.path)}
+          />
+          {projectInfo?.branch && (
+            <span className="ui-mono hidden items-center gap-1 text-[11px] text-white/40 sm:inline-flex">
+              <GitBranch className="h-3 w-3" />
+              {projectInfo.branch}
+              {projectInfo.changedFiles > 0 && ` · ${projectInfo.changedFiles} cambios`}
+            </span>
           )}
-          <Button type="button" size="sm" variant="outline" onClick={openProject} className="border-white/10 text-white/70 hover:text-white">
-            <FolderOpen className="h-3.5 w-3.5" />
-            Abrir proyecto
+          {!connected && <span className="ui-mono text-[11px] text-red-300">servidor sin conexión</span>}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button type="button" size="sm" variant="ghost" onClick={() => setConnectorsOpen(true)} className="ui-mono">
+            <Plug className="h-3.5 w-3.5" />
+            conectores
+            {connectedConnectors > 0 && <span className="text-nim-yellow">{connectedConnectors}</span>}
           </Button>
-          <Button type="button" size="icon" variant="ghost" onClick={refreshProject} className="text-white/60 hover:text-white" aria-label="Actualizar Code Mode">
-            <RefreshCw className="h-4 w-4" />
+          <Button type="button" size="icon" variant="ghost" onClick={refreshProject} aria-label="Actualizar">
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </header>
 
       {error && (
-        <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+        <div className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-100">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">{error}</div>
-          {!connected && <span className="text-red-100/60">Ejecuta npm run server</span>}
+          {!connected && !getDesktop() && <span className="ui-mono text-xs text-red-100/60">npm run server</span>}
         </div>
       )}
 
@@ -400,7 +461,7 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[20%_50%_30%]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_380px]">
         <FileExplorer
           entries={entries}
           selectedPath={selectedFile?.path}
@@ -442,9 +503,19 @@ export function CodeMode({ settings, onOpenSettings }: CodeModeProps) {
           agents={agents}
           agentMessages={agentMessages}
           agentsMode={wantsAgents(task) || agents.length > 0}
+          model={settings.selectedModel}
+          onModelChange={onModelChange}
         />
       </div>
 
+      <ConnectorsDialog
+        open={connectorsOpen}
+        onOpenChange={(value) => {
+          setConnectorsOpen(value);
+          if (!value) void refreshProject();
+        }}
+        client={client}
+      />
       <ConfirmDialog
         open={Boolean(pendingConfirm)}
         title={pendingConfirm?.title ?? "Confirmar"}

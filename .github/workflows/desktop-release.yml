@@ -47,4 +47,5 @@ jobs:
           tag_name: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
           files: release/NimChat-Setup-*.exe
+          body_path: .github/release-notes.md
           generate_release_notes: true

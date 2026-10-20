@@ -38,7 +38,7 @@ export default function DescargarPage() {
         Tus chats y tu API key se guardan solo en tu dispositivo.
       </p>
 
-      <section className="mt-8 rounded-xl border border-nim-yellow/30 bg-nim-yellow/5 p-5">
+      <section className="mt-8 rounded-lg border border-nim-yellow/30 bg-nim-yellow/5 p-5">
         <h2 className="text-lg font-medium">Aplicación de escritorio para Windows</h2>
         <p className="mt-1 text-sm text-white/60">
           Instalador .exe con todo incluido: chat, Design y Code con agentes, sin
@@ -60,7 +60,7 @@ export default function DescargarPage() {
       <h2 className="mt-10 text-xl font-medium">O instálala desde el navegador</h2>
       <section className="mt-4 space-y-4">
         {STEPS.map((s) => (
-          <div key={s.title} className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div key={s.title} className="rounded-lg border border-white/10 bg-white/5 p-4">
             <h2 className="font-medium">{s.title}</h2>
             <p className="mt-1 text-sm text-white/60">{s.body}</p>
           </div>
@@ -73,7 +73,7 @@ export default function DescargarPage() {
           Si usas la versión web, el modo Code necesita el servidor local para leer
           archivos y ejecutar comandos en tu equipo (la app de escritorio ya lo incluye):
         </p>
-        <pre className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-4 text-sm text-white/80">
+        <pre className="mt-3 overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-4 text-sm text-white/80">
 {`git clone https://github.com/Pausiar/NIMChat.git
 cd NIMChat
 npm install

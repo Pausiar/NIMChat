@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 240 6% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 6% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 6% 6%;
-    --popover-foreground: 0 0% 98%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 92%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 92%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 92%;
     --primary: 48 96% 53%;
-    --primary-foreground: 240 10% 4%;
-    --secondary: 240 4% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 48 96% 53%;
-    --accent-foreground: 240 10% 4%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 13%;
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 48 30% 18%;
-    --input: 240 4% 14%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 48 96% 53%;
-    --radius: 0.5rem;
+    --radius: 0.375rem;
   }
 }
 
@@ -33,7 +33,7 @@
 
 html,
 body {
-  background-color: #0a0a0b;
+  background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
   font-family:
@@ -58,21 +58,21 @@ samp {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(250, 204, 21, 0.18);
+  background: rgba(255, 255, 255, 0.10);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(250, 204, 21, 0.32);
+  background: rgba(255, 255, 255, 0.20);
 }
 
-.lab-bg::before {
-  overflow: hidden;
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(800px circle at 0% 0%, rgba(250, 204, 21, 0.08), transparent 50%),
-    radial-gradient(600px circle at 100% 100%, rgba(202, 138, 4, 0.10), transparent 50%);
-  pointer-events: none;
-  box-sizing: border-box;
+
+::selection {
+  background: rgba(250, 204, 21, 0.3);
+}
+
+/* Interfaz tipo terminal: etiquetas, pestañas y estados en monoespaciada. */
+.ui-mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
