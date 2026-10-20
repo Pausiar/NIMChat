@@ -4,6 +4,7 @@ import { Menu, Settings as SettingsIcon } from "lucide-react";
 import { NimLogo } from "@/components/brand/NimLogo";
 import { cn } from "@/lib/utils";
 import { getDesktop } from "@/lib/desktop";
+import { UpdateBadge } from "./UpdateBadge";
 
 export type AppMode = "chat" | "design" | "code";
 
@@ -85,6 +86,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-3">
+        <UpdateBadge />
         {!hasApiKey && (
           <button
             type="button"

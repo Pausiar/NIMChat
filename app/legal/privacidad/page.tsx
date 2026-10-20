@@ -27,6 +27,7 @@ export default function PrivacidadPage() {
         <li><strong>Clave de API:</strong> viaja en una cabecera en cada petición para autenticarte ante NVIDIA. No se guarda en el servidor.</li>
         <li><strong>Registros técnicos del alojamiento:</strong> el proveedor donde se despliegue la web puede registrar datos técnicos (IP, fecha, ruta) por seguridad y funcionamiento.</li>
         <li><strong>Conectores MCP (opcional):</strong> si añades conectores en el modo Code, el agente puede enviar a esos servicios (por ejemplo GitHub o una base de datos) las consultas que genere y recibir sus datos. Tú los configuras y se rigen por las condiciones de cada servicio. Sus claves se guardan solo en tu equipo, en <code>~/.nimchat/mcp.json</code>.</li>
+        <li><strong>Actualizaciones (app de escritorio):</strong> la app consulta periódicamente los lanzamientos públicos de GitHub (<code>github.com/Pausiar/NIMChat</code>) para saber si hay una versión nueva. GitHub recibe la petición (con tu dirección IP) como cualquier descarga; no se envía ningún dato de tus chats ni de tu clave. La descarga se hace solo cuando tú lo pides.</li>
         <li><strong>Servidor local (modo Code):</strong> escucha solo en tu equipo (localhost) y no envía datos al titular.</li>
       </ul>
 

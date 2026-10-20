@@ -150,3 +150,11 @@ HTML + CSS + JS sin compilación: `components/design/web-doc.ts` (extrae/compone
 ## Ventana de escritorio
 
 `titleBarStyle: "hidden"` + `titleBarOverlay` oscuro; sin menú nativo (atajos en `setupShortcuts`). La `TopBar` es arrastrable y deja sitio a los botones de ventana con `env(titlebar-area-*)`.
+
+## Actualizaciones automáticas
+
+- `electron/updater.cjs` (electron-updater, proveedor GitHub de `package.json > build.publish`): comprueba a los 20 s de abrir y cada 4 h; `autoDownload=false` (descarga solo si el usuario lo pide); `autoInstallOnAppQuit`; instalación silenciosa con `quitAndInstall(true, true)`.
+- Estados enviados a la interfaz por IPC (`updater:state`): idle · checking · available · downloading · downloaded · not-available · error · disabled (sin instalar). UI: `components/shell/UpdateBadge.tsx` y `components/settings/UpdatesSection.tsx` (hook `lib/use-updater.ts`).
+- `NIMCHAT_UPDATE_URL` apunta a un servidor genérico con `latest.yml` (pruebas o réplica propia). En desarrollo hace falta además un `dev-app-update.yml` (ignorado por git).
+- El workflow comprueba y sube `latest.yml` y el `.blockmap` a cada release: sin `latest.yml` la app no ve versiones nuevas.
+- Las dependencias de la web están en `devDependencies` a propósito: electron-builder solo empaqueta `dependencies` (aquí solo `electron-updater`), lo que adelgaza el instalador y cada actualización.

@@ -55,6 +55,8 @@ Descarga `NimChat-Setup-x.y.z.exe` desde [Releases](https://github.com/Pausiar/N
 
 > Windows puede mostrar un aviso de SmartScreen porque la app aún no está firmada.
 
+**Actualizaciones desde la app:** NimChat comprueba solo si hay una versión nueva en [Releases](https://github.com/Pausiar/NIMChat/releases) (al abrir y cada pocas horas). Cuando la hay, aparece un aviso arriba: pulsa *actualizar*, se descarga y *reiniciar para actualizar* la instala y reabre la app. También puedes buscarlas a mano en Ajustes. Para que una versión llegue a los usuarios, el release debe incluir `latest.yml` (lo sube el workflow).
+
 Para generarla tú mismo: `npm install && npm run desktop:dist` (instalador en `release/`). Para probarla sin empaquetar: `npm run desktop`. El instalador de Windows también lo construye GitHub Actions (`.github/workflows/desktop-release.yml`) y lo adjunta al publicar un release.
 
 ## 🚀 Instalación (versión web)

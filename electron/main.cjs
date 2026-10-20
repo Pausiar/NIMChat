@@ -2,7 +2,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
-const { startBackends, SERVER_PORT } = require("./runtime.cjs");
+const { startBackends } = require("./runtime.cjs");
+const { initUpdater } = require("./updater.cjs");
 
 let mainWindow = null;
 let uiUrl = "";
@@ -43,6 +44,7 @@ async function boot() {
   const started = await startBackends({ webDir, serverFile, projectRoot: defaultProjectsDir() });
   uiUrl = started.uiUrl;
   registerDialogs();
+  initUpdater(() => mainWindow, (event) => Boolean(event.senderFrame && event.senderFrame.url.startsWith(uiUrl)));
   Menu.setApplicationMenu(null);
   createWindow();
 }

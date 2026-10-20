@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { ApiKeyInput } from "./ApiKeyInput";
+import { UpdatesSection } from "./UpdatesSection";
 import { ModelSelector } from "./ModelSelector";
 import { AppSettings, DEFAULT_SETTINGS, type MaxTokensMode } from "@/lib/chat-storage";
 import { getModel } from "@/lib/models";
@@ -55,7 +56,9 @@ export function SettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 pt-2">
+        <UpdatesSection />
+
+        <div className="space-y-6 pt-4">
           <ApiKeyInput
             value={draft.apiKey}
             onChange={(v) => setDraft((d) => ({ ...d, apiKey: v }))}
