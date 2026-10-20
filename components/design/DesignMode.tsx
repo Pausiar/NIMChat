@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import * as Babel from "@babel/standalone";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptPanel } from "./PromptPanel";
@@ -11,21 +10,27 @@ import { uid } from "@/lib/utils";
 import type { AppSettings } from "@/lib/chat-storage";
 import { resolveMaxTokens } from "@/lib/token-policy";
 import type { DesignGeneration, DesignState } from "./types";
+import { checkJs, composeDocument, extractWebParts, splitDocument } from "./web-doc";
 
-const DESIGN_SYSTEM_PROMPT = `You are an expert UI/UX engineer. Generate clean, modern React components using Tailwind CSS.
-Return ONLY the component code, no explanations, no markdown fences, no imports --
-just one self-contained React component starting with export default function Component().
-Use realistic placeholder data. Make it visually polished.
-You may use lucide-react icons directly by name without importing them.
-IMPORTANT RULES:
-- Keep the component focused and reasonably sized (under ~320 lines).
-- Do not use Next.js-specific components such as Link or Image.
-- If you need state, use React.useState / React.useMemo / React.useEffect, not imported hooks.
-- Never use inline SVG data URIs inside className or style attributes (no bg-[url('data:image/svg+xml,...')]).
-- Never embed raw SVG inside CSS classes or style props.
-- If you need a background pattern, use Tailwind gradient or solid color classes only.
-- Keep className strings simple: no nested quotes, no data URIs, no base64.
-- Do not include prose, markdown, tables, comments outside the component, or explanations.`;
+const DESIGN_SYSTEM_PROMPT = `You are an expert front-end designer. Build a polished, modern and responsive interface using plain HTML, CSS and vanilla JavaScript.
+There is no build step: no React, no TypeScript, no frameworks, no imports, and no external requests (no CDNs, web fonts or image URLs).
+
+Return exactly three fenced code blocks, in this order, and nothing else (no explanations):
+\`\`\`html
+only the markup that goes inside <body>: no <html>, <head>, <style> or <script> tags
+\`\`\`
+\`\`\`css
+all the styles. Start with a small reset (*{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif}), use CSS variables, flexbox/grid and media queries
+\`\`\`
+\`\`\`js
+vanilla JavaScript for the interactivity (DOM APIs, event listeners). If nothing is interactive, put a comment
+\`\`\`
+
+Rules:
+- Semantic, accessible HTML (labels, alt text, aria where needed). Use realistic placeholder data in the user's language.
+- Icons: inline SVG inside the html block or emojis. No data: URIs, no base64, no external files.
+- Keep it focused (under ~300 lines in total) and make it work on mobile and desktop.
+- The JavaScript must be valid, must not throw on load and must not use import/export.`;
 
 interface DesignModeProps {
   state: DesignState;
@@ -46,6 +51,7 @@ export function DesignMode({
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeGenerationId, setActiveGenerationId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [liveReasoning, setLiveReasoning] = useState("");
   const [livePreview, setLivePreview] = useState("");
   const flushTimerRef = useRef<number | null>(null);
@@ -64,6 +70,7 @@ export function DesignMode({
     }
 
     setError(null);
+    setNotice(null);
     setLiveReasoning("");
     setLivePreview("");
     onStateChange((current) => ({
@@ -85,7 +92,7 @@ export function DesignMode({
     };
     const userContent =
       mode === "refine" && state.currentCode
-        ? `Refina el componente existente según esta petición: ${prompt}\n\nCódigo actual:\n${state.currentCode}`
+        ? refinePrompt(prompt, state.currentCode)
         : prompt;
 
     try {
@@ -110,7 +117,10 @@ export function DesignMode({
         },
       });
 
-      const code = assertValidGeneratedCode(extractJSX(rawOutput));
+      const parts = extractWebParts(rawOutput);
+      const code = composeDocument(parts);
+      const jsProblem = checkJs(parts.js);
+      setNotice(jsProblem ? `El JavaScript generado tiene un error de sintaxis: ${jsProblem}. Pide al modelo que lo corrija con «Refinar».` : null);
       const generation: DesignGeneration = {
         id: uid("design"),
         prompt,
@@ -227,126 +237,27 @@ export function DesignMode({
           refreshKey={refreshKey}
           onRefresh={() => setRefreshKey((value) => value + 1)}
           isGenerating={state.isGenerating}
+          notice={notice}
         />
       </div>
     </div>
   );
 }
 
-function assertValidGeneratedCode(code: string): string {
-  try {
-    Babel.transform(code, {
-      filename: "GeneratedComponent.tsx",
-      presets: [
-        ["typescript", { isTSX: true, allExtensions: true }],
-        ["react", { runtime: "classic" }],
-      ],
-    });
-    return code;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/unterminated string constant|unexpected token/i.test(message)) {
-      throw new Error(
-        "El modelo devolvió JSX incompleto o mal formado. Aumenta Max tokens en Ajustes (hasta 32768) y vuelve a intentarlo.",
-      );
-    }
-    throw new Error("El modelo no devolvió código válido. Prueba a generar de nuevo.");
-  }
-}
+function refinePrompt(request: string, currentDocument: string): string {
+  const { html, css, js } = splitDocument(currentDocument);
+  return `Refina el diseño existente según esta petición: ${request}
 
-function extractCodeBlock(output: string): string {
-  const matches = [...output.matchAll(/```(?:tsx|jsx|ts|js)?\s*([\s\S]*?)```/gi)];
-  if (matches.length === 0) return output;
+Diseño actual:
+\`\`\`html
+${html}
+\`\`\`
+\`\`\`css
+${css}
+\`\`\`
+\`\`\`js
+${js}
+\`\`\`
 
-  const codeLike = matches.find((match) => /export\s+default|function\s+\w+|const\s+\w+\s*=/.test(match[1]));
-  return (codeLike ?? matches[0])[1];
-}
-
-function stripImports(code: string): string {
-  return code
-    .replace(/^\s*["']use client["'];?\s*/gm, "")
-    .replace(/^\s*import[\s\S]*?;\s*/gm, "")
-    .replace(/^\s*export\s+\{[^}]*\};?\s*/gm, "")
-    .trim();
-}
-
-function sanitizeDangerousCss(code: string): string {
-  return code
-    .replace(/\s+[\w:/.-]+-\[[^\]\n]*(?:data:image|base64|<svg|%3csvg|%3Csvg)[^\]\n]*\]/g, "")
-    .replace(/\s+[\w:/.-]+-\[url\([\s\S]*?\)\]/g, "")
-    .replace(/style=\{\{[^}]*url\([^}]*\)[^}]*\}\}/g, "");
-}
-
-function sliceToCode(code: string): string {
-  const lines = code.split("\n");
-  const startIndex = lines.findIndex((line) =>
-    /^\s*(const|let|var|function|type|interface|export\s+default|export\s+function|export\s+const)\b/.test(line)
-  );
-
-  if (startIndex === -1) return code.trim();
-  return lines.slice(startIndex).join("\n").trim();
-}
-
-function ensureDefaultExport(code: string): string {
-  if (/export\s+default\s+/.test(code)) return code;
-
-  const functionMatch = code.match(/\bfunction\s+([A-Z][\w]*)\s*\(/);
-  if (functionMatch) {
-    return code.replace(/\bfunction\s+([A-Z][\w]*)\s*\(/, "export default function $1(");
-  }
-
-  const constMatch = code.match(/\bconst\s+([A-Z][\w]*)\s*=\s*(?:\([^)]*\)|[\w{} ,]+)?\s*=>/);
-  if (constMatch) return `${code}\n\nexport default ${constMatch[1]};`;
-
-  throw new Error("El modelo no devolvió un componente React exportable. Prueba a generar de nuevo.");
-}
-
-function autoCloseCode(code: string): string {
-  const lines = code.split("\n");
-
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const dq = (line.match(/(?<!\\)"/g) || []).length;
-    const sq = (line.match(/(?<!\\)'/g) || []).length;
-    const bt = (line.match(/(?<!\\)`/g) || []).length;
-    if (dq % 2 !== 0 || sq % 2 !== 0 || bt % 2 !== 0) {
-      lines.splice(i);
-    }
-    break;
-  }
-
-  let trimmed = lines.join("\n");
-
-  const openB = (trimmed.match(/\{/g) || []).length;
-  const closeB = (trimmed.match(/\}/g) || []).length;
-  const openP = (trimmed.match(/\(/g) || []).length;
-  const closeP = (trimmed.match(/\)/g) || []).length;
-
-  const missingParens = Math.max(0, openP - closeP);
-  const missingBraces = Math.max(0, openB - closeB);
-
-  if (missingParens > 0 || missingBraces > 0) {
-    trimmed += "\n" + ")".repeat(missingParens) + "\n" + "}".repeat(missingBraces);
-  }
-
-  return trimmed;
-}
-
-export function extractJSX(rawOutput: string): string {
-  const withoutFences = sanitizeDangerousCss(extractCodeBlock(rawOutput))
-    .replace(/<\/\s+<\/(\w[\w.]*)\s*>/g, "</$1>")
-    .replace(/<\/\s+(\w[\w.]*)\s*>/g, "</$1>")
-    .replace(/<\/\s*$/gm, "")
-    .trim();
-
-  let code = ensureDefaultExport(stripImports(sliceToCode(withoutFences)));
-
-  code = autoCloseCode(code);
-
-  if (!/export\s+default\s+/.test(code) || !/return\s*\(?\s*</.test(code)) {
-    throw new Error("El modelo no devolvió código válido. Intenta reformular el prompt.");
-  }
-
-  return code;
+Devuelve de nuevo los tres bloques completos (html, css y js) con los cambios aplicados.`;
 }

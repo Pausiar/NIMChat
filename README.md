@@ -24,6 +24,19 @@ Una interfaz web local, moderna y funcional para los mejores modelos open‑sour
 
 ---
 
+## 🧑‍💻 Modo Code
+
+Organizado como Claude Code: a la izquierda tus **proyectos con sus sesiones** de chat (cada proyecto, con su carpeta), en el centro el **chat** del agente —con una vista de **código** que muestra el explorador, el editor, la terminal y los cambios con el chat más pequeño debajo— y a la derecha las pestañas **Agentes**, **Contexto** y **Conectores**.
+
+- **Continuar:** si el agente se detiene (límite de pasos, error de la API o cancelación) aparece el botón *Continuar*, que sigue con la misma conversación sin empezar de cero.
+- **Contexto:** cuando la conversación crece, el agente la compacta solo (resumen) y lo guarda en `context_agent.md`, que además mantiene al trabajar. Desde la pestaña *Contexto* puedes verlo y compactar a mano.
+- **Explorador:** el agente puede delegar en un subagente de solo lectura que lee los archivos y le dice cuáles tocar, para mantener su contexto pequeño.
+- **Límites de la API:** pausa configurable entre peticiones (Ajustes) y reintentos automáticos ante errores 429.
+
+## 🎨 Modo Design
+
+Genera interfaces en **HTML, CSS y JavaScript** (sin compilar), las muestra en un iframe aislado y deja editar cada parte por separado.
+
 ## 🔌 Conectores MCP
 
 En el modo **Code** (botón *conectores*) puedes añadir servidores [MCP](https://modelcontextprotocol.io) por comando local (stdio) o por URL (http): GitHub, bases de datos PostgreSQL, sistema de archivos, Brave Search, memoria o cualquier otro. El agente (y los subagentes) usan sus herramientas como `mcp__<conector>__<herramienta>`.

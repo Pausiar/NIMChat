@@ -21,6 +21,7 @@ interface PreviewPanelProps {
   refreshKey: number;
   onRefresh: () => void;
   isGenerating: boolean;
+  notice?: string | null;
 }
 
 const backgrounds: { id: DesignBackground; label: string }[] = [
@@ -48,6 +49,7 @@ export function PreviewPanel({
   refreshKey,
   onRefresh,
   isGenerating,
+  notice,
 }: PreviewPanelProps) {
   const handleDownloadHtml = () => {
     if (!code.trim()) return;
@@ -108,6 +110,7 @@ export function PreviewPanel({
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "preview" ? (
           <ComponentRenderer
+            notice={notice}
             code={code}
             background={background}
             viewport={viewport}

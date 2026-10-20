@@ -1,6 +1,7 @@
 /** Puente con la app de escritorio (Electron). En el navegador no existe. */
 interface DesktopBridge {
   isDesktop: true;
+  platform: string;
   pickFolder: () => Promise<string | null>;
   pickFile: () => Promise<string | null>;
 }

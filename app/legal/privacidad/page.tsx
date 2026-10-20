@@ -22,7 +22,7 @@ export default function PrivacidadPage() {
 
       <h2>2. Qué datos se tratan y dónde</h2>
       <ul>
-        <li><strong>En tu navegador (localStorage):</strong> chats, ajustes, tu clave de API de NVIDIA y la caché de la lista de modelos. Se quedan en tu dispositivo; el titular no tiene acceso a ellos.</li>
+        <li><strong>En tu navegador (localStorage):</strong> chats, sesiones de Code (incluidas las acciones y la conversación del agente), ajustes, tu clave de API de NVIDIA y la caché de la lista de modelos. Se quedan en tu dispositivo; el titular no tiene acceso a ellos.</li>
         <li><strong>Mensajes enviados a la IA:</strong> el texto que escribes (y el código o archivos que el modo Code incluya) se envía a través del endpoint <code>/api/chat</code> a NVIDIA NIM para generar la respuesta. El endpoint reenvía la petición y no la almacena.</li>
         <li><strong>Clave de API:</strong> viaja en una cabecera en cada petición para autenticarte ante NVIDIA. No se guarda en el servidor.</li>
         <li><strong>Registros técnicos del alojamiento:</strong> el proveedor donde se despliegue la web puede registrar datos técnicos (IP, fecha, ruta) por seguridad y funcionamiento.</li>

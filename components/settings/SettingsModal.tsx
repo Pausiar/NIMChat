@@ -175,10 +175,31 @@ export function SettingsModal({
                 }))
               }
             />
+            <div className="ui-mono pt-2 text-[10px] uppercase tracking-wider text-white/30">Agente (Code)</div>
+            <ParamSlider
+              label="Pausa entre peticiones"
+              hint="Segundos de espera antes de cada llamada del agente a la API. Súbelo si NVIDIA te limita (error 429)."
+              min={0}
+              max={60}
+              step={1}
+              value={draft.requestDelaySeconds}
+              format={(v) => (v === 0 ? "sin pausa" : `${v} s`)}
+              onChange={(v) => setDraft((d) => ({ ...d, requestDelaySeconds: v }))}
+            />
+            <ParamSlider
+              label="Pasos máximos por tarea"
+              hint="Al llegar al límite el agente se pausa y puedes pulsar «Continuar» sin perder el contexto."
+              min={10}
+              max={200}
+              step={10}
+              value={draft.agentMaxIterations}
+              format={(v) => v.toString()}
+              onChange={(v) => setDraft((d) => ({ ...d, agentMaxIterations: v }))}
+            />
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="ghost"
             onClick={() => setDraft(DEFAULT_SETTINGS)}

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Pencil, Plug, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { McpServerInfo, McpServerInput, NimChatServerClient } from "@/lib/server-client";
 import { cn } from "@/lib/utils";
 
@@ -101,13 +100,14 @@ function formFromServer(server: McpServerInfo): FormState {
   };
 }
 
-interface ConnectorsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface ConnectorsPanelProps {
   client: NimChatServerClient;
+  /** Se avisa al cambiar la lista (para el contador del encabezado). */
+  onChange?: (servers: McpServerInfo[]) => void;
 }
 
-export function ConnectorsDialog({ open, onOpenChange, client }: ConnectorsDialogProps) {
+/** Conectores MCP: GitHub, bases de datos y otras herramientas para el agente. */
+export function ConnectorsPanel({ client, onChange }: ConnectorsPanelProps) {
   const [servers, setServers] = useState<McpServerInfo[]>([]);
   const [form, setForm] = useState<FormState | null>(null);
   const [hint, setHint] = useState("");
@@ -116,24 +116,25 @@ export function ConnectorsDialog({ open, onOpenChange, client }: ConnectorsDialo
 
   const refresh = useCallback(async () => {
     try {
-      setServers(await client.listMcpServers());
+      const list = await client.listMcpServers();
+      setServers(list);
+      onChange?.(list);
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo leer la lista de conectores.");
     }
-  }, [client]);
+  }, [client, onChange]);
 
   useEffect(() => {
-    if (open) void refresh();
-    else setForm(null);
-  }, [open, refresh]);
+    void refresh();
+  }, [refresh]);
 
   const anyConnecting = servers.some((s) => s.status === "connecting");
   useEffect(() => {
-    if (!open || !anyConnecting) return;
+    if (!anyConnecting) return;
     const timer = window.setInterval(() => void refresh(), 1500);
     return () => window.clearInterval(timer);
-  }, [open, anyConnecting, refresh]);
+  }, [anyConnecting, refresh]);
 
   const save = async () => {
     if (!form) return;
@@ -179,17 +180,10 @@ export function ConnectorsDialog({ open, onOpenChange, client }: ConnectorsDialo
   const label = "ui-mono mb-1 block text-[11px] text-white/45";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plug className="h-4 w-4 text-nim-yellow" />
-            Conectores MCP
-          </DialogTitle>
-          <DialogDescription>
-            Conecta el agente de Code con GitHub, bases de datos y otras herramientas mediante el Model Context Protocol.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-3 p-3">
+      <p className="text-xs leading-relaxed text-white/45">
+        Conecta el agente con GitHub, bases de datos y otras herramientas mediante el Model Context Protocol.
+      </p>
 
         {error && (
           <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">{error}</div>
@@ -351,7 +345,6 @@ export function ConnectorsDialog({ open, onOpenChange, client }: ConnectorsDialo
             </Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
