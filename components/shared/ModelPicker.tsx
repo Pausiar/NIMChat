@@ -42,7 +42,7 @@ export function ModelPicker({ value, onChange, side = "bottom", align = "start",
             className
           )}
         >
-          <span className="truncate">{current.name}</span>
+          <span className="min-w-0 truncate">{current.name}</span>
           <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
         </button>
       </DropdownMenuTrigger>

@@ -2,9 +2,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require("electron");
-const { startBackends, SERVER_PORT } = require("./runtime.cjs");
+const { startBackends } = require("./runtime.cjs");
+const { initUpdater } = require("./updater.cjs");
 
-const REPO_URL = "https://github.com/Pausiar/NIMChat";
 let mainWindow = null;
 let uiUrl = "";
 
@@ -44,7 +44,8 @@ async function boot() {
   const started = await startBackends({ webDir, serverFile, projectRoot: defaultProjectsDir() });
   uiUrl = started.uiUrl;
   registerDialogs();
-  buildMenu();
+  initUpdater(() => mainWindow, (event) => Boolean(event.senderFrame && event.senderFrame.url.startsWith(uiUrl)));
+  Menu.setApplicationMenu(null);
   createWindow();
 }
 
@@ -55,8 +56,10 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: "NimChat",
-    backgroundColor: "#0a0a0b",
-    autoHideMenuBar: false,
+    backgroundColor: "#0a0a0a",
+    // Barra de título integrada en la interfaz (negra) con los botones de ventana del sistema.
+    titleBarStyle: "hidden",
+    titleBarOverlay: { color: "#0a0a0a", symbolColor: "#d4d4d4", height: 40 },
     icon: path.join(__dirname, "..", "assets", "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -80,6 +83,7 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+  setupShortcuts(mainWindow);
   mainWindow.loadURL(uiUrl);
 }
 
@@ -99,60 +103,27 @@ function registerDialogs() {
   );
 }
 
-async function openProjectFolder() {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    title: "Abrir carpeta de proyecto",
-    properties: ["openDirectory"],
+/** Sin barra de menú nativa (era blanca y desentonaba): atajos básicos a mano. */
+function setupShortcuts(win) {
+  win.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    const ctrl = input.control || input.meta;
+    const key = input.key.toLowerCase();
+    if (key === "f12" || (ctrl && input.shift && key === "i")) {
+      win.webContents.toggleDevTools();
+    } else if (ctrl && key === "r") {
+      win.webContents.reload();
+    } else if (ctrl && (key === "=" || key === "+")) {
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() + 0.5);
+    } else if (ctrl && key === "-") {
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() - 0.5);
+    } else if (ctrl && key === "0") {
+      win.webContents.setZoomLevel(0);
+    } else if (key === "f11") {
+      win.setFullScreen(!win.isFullScreen());
+    } else {
+      return;
+    }
+    event.preventDefault();
   });
-  if (result.canceled || result.filePaths.length === 0) return;
-  try {
-    const res = await fetch(`http://127.0.0.1:${SERVER_PORT}/api/project/open`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: result.filePaths[0] }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    mainWindow?.webContents.reload();
-  } catch (error) {
-    dialog.showErrorBox("No se pudo abrir la carpeta", error instanceof Error ? error.message : String(error));
-  }
-}
-
-function buildMenu() {
-  const goto = (route) => () => mainWindow?.loadURL(`${uiUrl}${route}`);
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      {
-        label: "Archivo",
-        submenu: [
-          { label: "Abrir carpeta de proyecto…", accelerator: "CmdOrCtrl+O", click: openProjectFolder },
-          { label: "Inicio", click: goto("/") },
-          { type: "separator" },
-          { role: "quit", label: "Salir" },
-        ],
-      },
-      {
-        label: "Ver",
-        submenu: [
-          { role: "reload", label: "Recargar" },
-          { role: "zoomIn", label: "Acercar" },
-          { role: "zoomOut", label: "Alejar" },
-          { role: "resetZoom", label: "Tamaño original" },
-          { role: "togglefullscreen", label: "Pantalla completa" },
-          { role: "toggleDevTools", label: "Herramientas de desarrollo" },
-        ],
-      },
-      {
-        label: "Ayuda",
-        submenu: [
-          { label: "Aviso legal", click: goto("/legal/aviso-legal") },
-          { label: "Privacidad", click: goto("/legal/privacidad") },
-          { label: "Términos de uso", click: goto("/legal/terminos") },
-          { label: "Almacenamiento local", click: goto("/legal/almacenamiento") },
-          { type: "separator" },
-          { label: "Repositorio en GitHub", click: () => shell.openExternal(REPO_URL) },
-        ],
-      },
-    ])
-  );
 }

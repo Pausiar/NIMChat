@@ -1,6 +1,6 @@
 {
   "name": "nimchat",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,21 +14,33 @@
     "desktop:dist": "next build && node scripts/prepare-desktop.mjs && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
-    "@babel/standalone": "^7.29.4",
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-slider": "^1.2.1",
     "@radix-ui/react-slot": "^1.1.0",
+    "@tailwindcss/typography": "^0.5.20",
     "@types/express": "^5.0.6",
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/ws": "^8.18.1",
+    "autoprefixer": "^10.4.20",
     "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.28.0",
     "express": "^5.2.1",
     "framer-motion": "^11.11.0",
     "lucide-react": "^0.460.0",
     "next": "^15.1.0",
+    "postcss": "^8.4.49",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
@@ -37,26 +49,13 @@
     "shiki": "^4.0.2",
     "simple-git": "^3.36.0",
     "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^3.4.14",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.21.0",
+    "typescript": "^5.6.3",
     "ws": "^8.20.1",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/typography": "^0.5.20",
-    "@types/babel__standalone": "^7.1.9",
-    "@types/node": "^22.9.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@types/react-syntax-highlighter": "^15.5.13",
-    "autoprefixer": "^10.4.20",
-    "electron": "^41.0.0",
-    "electron-builder": "^26.0.0",
-    "esbuild": "^0.28.0",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.14",
-    "typescript": "^5.6.3"
   },
   "main": "electron/main.cjs",
   "description": "Suite de IA para desarrolladores con modelos de NVIDIA NIM",
@@ -101,6 +100,14 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "NimChat"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Pausiar",
+        "repo": "NIMChat",
+        "releaseType": "release"
+      }
+    ]
   }
 }

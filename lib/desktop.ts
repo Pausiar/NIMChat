@@ -1,6 +1,35 @@
+export type UpdaterStatus =
+  | "idle"
+  | "disabled"
+  | "checking"
+  | "available"
+  | "not-available"
+  | "downloading"
+  | "downloaded"
+  | "error";
+
+export interface UpdaterState {
+  status: UpdaterStatus;
+  currentVersion: string;
+  newVersion?: string;
+  percent?: number;
+  error?: string;
+  checkedAt?: number;
+}
+
+interface UpdaterBridge {
+  getState: () => Promise<UpdaterState>;
+  check: () => Promise<UpdaterState>;
+  download: () => Promise<UpdaterState>;
+  install: () => Promise<UpdaterState>;
+  onState: (callback: (state: UpdaterState) => void) => () => void;
+}
+
 /** Puente con la app de escritorio (Electron). En el navegador no existe. */
 interface DesktopBridge {
+  updater: UpdaterBridge;
   isDesktop: true;
+  platform: string;
   pickFolder: () => Promise<string | null>;
   pickFile: () => Promise<string | null>;
 }

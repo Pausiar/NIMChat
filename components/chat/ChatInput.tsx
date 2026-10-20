@@ -78,7 +78,9 @@ export function ChatInput({
           />
         </div>
         <div className="flex items-center justify-between gap-2 px-2 py-2">
-          <ModelPicker value={selectedModel} onChange={onModelChange} side="top" />
+          <div className="min-w-0 flex-1">
+            <ModelPicker value={selectedModel} onChange={onModelChange} side="top" className="max-w-full" />
+          </div>
           {isStreaming ? (
             <Button
               type="button"

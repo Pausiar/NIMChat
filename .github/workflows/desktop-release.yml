@@ -33,11 +33,22 @@ jobs:
       - name: Compilar la app e instalador (.exe)
         run: npm run desktop:dist
 
+      - name: Comprobar archivos de actualización automática
+        shell: bash
+        run: |
+          ls -la release
+          # latest.yml es lo que lee la app para saber que hay una versión nueva.
+          test -f release/latest.yml
+          test -f release/NimChat-Setup-*.exe.blockmap
+
       - name: Subir instalador como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: NimChat-Windows
-          path: release/NimChat-Setup-*.exe
+          path: |
+            release/NimChat-Setup-*.exe
+            release/NimChat-Setup-*.exe.blockmap
+            release/latest.yml
           if-no-files-found: error
 
       - name: Adjuntar instalador al release
@@ -46,6 +57,9 @@ jobs:
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
-          files: release/NimChat-Setup-*.exe
+          files: |
+            release/NimChat-Setup-*.exe
+            release/NimChat-Setup-*.exe.blockmap
+            release/latest.yml
           body_path: .github/release-notes.md
           generate_release_notes: true

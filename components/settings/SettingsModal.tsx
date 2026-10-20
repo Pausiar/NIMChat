@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { ApiKeyInput } from "./ApiKeyInput";
+import { UpdatesSection } from "./UpdatesSection";
 import { ModelSelector } from "./ModelSelector";
 import { AppSettings, DEFAULT_SETTINGS, type MaxTokensMode } from "@/lib/chat-storage";
 import { getModel } from "@/lib/models";
@@ -55,7 +56,9 @@ export function SettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 pt-2">
+        <UpdatesSection />
+
+        <div className="space-y-6 pt-4">
           <ApiKeyInput
             value={draft.apiKey}
             onChange={(v) => setDraft((d) => ({ ...d, apiKey: v }))}
@@ -175,10 +178,31 @@ export function SettingsModal({
                 }))
               }
             />
+            <div className="ui-mono pt-2 text-[10px] uppercase tracking-wider text-white/30">Agente (Code)</div>
+            <ParamSlider
+              label="Pausa entre peticiones"
+              hint="Segundos de espera antes de cada llamada del agente a la API. Súbelo si NVIDIA te limita (error 429)."
+              min={0}
+              max={60}
+              step={1}
+              value={draft.requestDelaySeconds}
+              format={(v) => (v === 0 ? "sin pausa" : `${v} s`)}
+              onChange={(v) => setDraft((d) => ({ ...d, requestDelaySeconds: v }))}
+            />
+            <ParamSlider
+              label="Pasos máximos por tarea"
+              hint="Al llegar al límite el agente se pausa y puedes pulsar «Continuar» sin perder el contexto."
+              min={10}
+              max={200}
+              step={10}
+              value={draft.agentMaxIterations}
+              format={(v) => v.toString()}
+              onChange={(v) => setDraft((d) => ({ ...d, agentMaxIterations: v }))}
+            />
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="ghost"
             onClick={() => setDraft(DEFAULT_SETTINGS)}

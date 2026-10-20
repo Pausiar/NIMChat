@@ -132,3 +132,29 @@ Páginas en `app/legal/*` (aviso legal, privacidad, términos, almacenamiento lo
 
 - `electron/preload.cjs` expone `window.nimchatDesktop.{pickFolder,pickFile}` (IPC validado por origen). `lib/desktop.ts` lo consume; sin Electron se pide la ruta en un diálogo de texto.
 - `components/code/ProjectMenu.tsx` + `lib/recent-projects.ts` (recientes en localStorage). Al cambiar de proyecto se limpia la tarea/acciones del anterior.
+
+## Code v1.1: sesiones, agente reanudable y contexto
+
+- Layout: `ProjectSidebar` (proyectos → sesiones) · centro `CodeChat` (vista chat, o vista código = explorador + editor/terminal/cambios con el chat compacto debajo) · `SidePanel` (agentes / contexto / conectores). Estado en `CodeMode.tsx`.
+- Sesiones persistidas en localStorage (`lib/code-sessions.ts`): `nimchat:code:sessions` (feed), `nimchat:code:transcript:<id>` (conversación del agente, para continuar).
+- `lib/agent-loop.ts`: `runAgentLoop({ resume })` continúa una conversación; devuelve `stopReason` (done/limit/confirmation/error/aborted) y siempre la conversación más reciente.
+- `lib/agent-context.ts`: estimación de tokens, `Throttle` (pausa entre peticiones compartida entre agentes), `compactMessages` (cola reciente por presupuesto de tokens, sin dejar resultados de herramienta huérfanos) y `saveContextSummary` (bloque delimitado en `context_agent.md`).
+- Reintento con espera ante 429/5xx en `callNimWithTools`. Ajustes: `requestDelaySeconds`, `agentMaxIterations`.
+- `explore_project`: subagente explorador de solo lectura (`read_file`, `list_directory`, `search_in_files`).
+- Prompts: `lib/agent-prompts.ts` (agente) y `DEFAULT_SYSTEM_PROMPT` en `lib/chat-storage.ts` (global; migra el prompt antiguo si no se tocó).
+
+## Design v1.1
+
+HTML + CSS + JS sin compilación: `components/design/web-doc.ts` (extrae/compone/separa el documento y comprueba la sintaxis del JS sin ejecutarlo), render en `iframe sandbox="allow-scripts"` con puente de errores. Sin Babel.
+
+## Ventana de escritorio
+
+`titleBarStyle: "hidden"` + `titleBarOverlay` oscuro; sin menú nativo (atajos en `setupShortcuts`). La `TopBar` es arrastrable y deja sitio a los botones de ventana con `env(titlebar-area-*)`.
+
+## Actualizaciones automáticas
+
+- `electron/updater.cjs` (electron-updater, proveedor GitHub de `package.json > build.publish`): comprueba a los 20 s de abrir y cada 4 h; `autoDownload=false` (descarga solo si el usuario lo pide); `autoInstallOnAppQuit`; instalación silenciosa con `quitAndInstall(true, true)`.
+- Estados enviados a la interfaz por IPC (`updater:state`): idle · checking · available · downloading · downloaded · not-available · error · disabled (sin instalar). UI: `components/shell/UpdateBadge.tsx` y `components/settings/UpdatesSection.tsx` (hook `lib/use-updater.ts`).
+- `NIMCHAT_UPDATE_URL` apunta a un servidor genérico con `latest.yml` (pruebas o réplica propia). En desarrollo hace falta además un `dev-app-update.yml` (ignorado por git).
+- El workflow comprueba y sube `latest.yml` y el `.blockmap` a cada release: sin `latest.yml` la app no ve versiones nuevas.
+- Las dependencias de la web están en `devDependencies` a propósito: electron-builder solo empaqueta `dependencies` (aquí solo `electron-updater`), lo que adelgaza el instalador y cada actualización.

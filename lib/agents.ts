@@ -56,6 +56,22 @@ export const DELEGATE_TOOLS = [
   },
 ] as const;
 
+export const EXPLORE_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "explore_project",
+      description:
+        "Delegate a read-only investigation to an explorer sub-agent. It reads files and returns which ones matter and what to change in each, keeping your own context small. Use it before editing in an unfamiliar or large project.",
+      parameters: {
+        type: "object",
+        properties: { question: { type: "string", description: "What you need to find out, including the task goal" } },
+        required: ["question"],
+      },
+    },
+  },
+] as const;
+
 export const MESSAGE_TOOLS = [
   {
     type: "function",
