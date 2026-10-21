@@ -17,14 +17,18 @@ import {
 } from "./agents";
 import {
   Throttle,
+  compactionReducedEnough,
   compactMessages,
   estimateTokens,
   limitForModel,
   saveContextSummary,
   sleep,
+  truncateToolResultsMechanically,
   type AgentMessage,
 } from "./agent-context";
+import { ArtifactStore, toolResultMeta, type ArtifactMeta } from "./artifact-store";
 import { EXPLORER_PROMPT, SYSTEM_PROMPT_CODE } from "./agent-prompts";
+import { getHardTruncateAt, getSoftCompactAt } from "./model-context";
 import type { ModelInfo } from "./models";
 
 export { SYSTEM_PROMPT_CODE };
@@ -61,6 +65,8 @@ interface RunAgentLoopOptions {
   onStatus?: (text: string | null) => void;
   /** Se llama tras cada paso con la conversación actual, para poder reanudarla. */
   onMessages?: (messages: AgentMessage[]) => void;
+  /** Metadatos de artefactos grandes guardados fuera del prompt. */
+  onArtifacts?: (artifacts: ArtifactMeta[]) => void;
   onAgentUpdate?: (agent: AgentInfo) => void;
   /** Si se define, el agente actúa como orquestador y puede delegar. */
   agents?: {
@@ -96,10 +102,13 @@ interface Shared {
   signal?: AbortSignal;
   throttle: Throttle;
   compactAtTokens: number;
+  hardTruncateAt: number;
+  artifacts: ArtifactStore;
   mcpTools?: Map<string, McpAgentTool>;
   onAction: (action: AgentAction) => void;
   onThought?: (content: string) => void;
   onStatus?: (text: string | null) => void;
+  onArtifacts?: (artifacts: ArtifactMeta[]) => void;
   onAgentUpdate?: (agent: AgentInfo) => void;
 }
 
@@ -118,10 +127,17 @@ interface LoopParams extends Shared {
   compact?: boolean;
 }
 
-const MCP_RESULT_LIMIT = 20000;
+const MCP_RESULT_LIMIT = 8_000;
 const EXPLORER_TOOL_NAMES = new Set(["read_file", "list_directory", "search_in_files"]);
 const EXPLORER_MAX_ITERATIONS = 14;
-export const DEFAULT_COMPACT_AT = 28000;
+/** @deprecated Prefer getSoftCompactAt(model, maxTokens). Kept for UI fallback. */
+export const DEFAULT_COMPACT_AT = 16_800;
+/** Iteraciones mínimas entre compactaciones LLM. */
+export const COMPACT_COOLDOWN_ITERS = 8;
+/** Máximo de compactaciones con summarizer por ejecución del bucle. */
+export const MAX_LLM_COMPACTIONS_PER_RUN = 4;
+/** Cola reciente a conservar al compactar (fracción del umbral blando). */
+const KEEP_TAIL_FRACTION = 0.25;
 
 export function mcpToolName(serverName: string, toolName: string) {
   const clean = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
@@ -168,6 +184,8 @@ export async function runAgentLoop(options: RunAgentLoopOptions): Promise<AgentR
   const userContent = resuming ? options.task : `${header}\nTask: ${options.task}`;
   const mcpTools = await loadMcpTools(client);
 
+  const softAt =
+    options.compactAtTokens ?? getSoftCompactAt(options.model, options.params.maxTokens);
   const shared: Shared = {
     client,
     apiKey: options.apiKey,
@@ -175,11 +193,14 @@ export async function runAgentLoop(options: RunAgentLoopOptions): Promise<AgentR
     params: options.params,
     signal: options.signal,
     throttle: new Throttle(options.requestDelayMs ?? 0),
-    compactAtTokens: options.compactAtTokens ?? DEFAULT_COMPACT_AT,
+    compactAtTokens: softAt,
+    hardTruncateAt: getHardTruncateAt(options.model, options.params.maxTokens),
+    artifacts: new ArtifactStore(),
     mcpTools,
     onAction: options.onAction,
     onThought: options.onThought,
     onStatus: options.onStatus,
+    onArtifacts: options.onArtifacts,
     onAgentUpdate: options.onAgentUpdate,
   };
 
@@ -334,8 +355,9 @@ function exploreHandler(shared: Shared, header: string): SpecialHandler {
           shared.onAgentUpdate?.({ ...info });
         },
       });
-      shared.onAgentUpdate?.({ ...info, status: "done", finishedAt: Date.now(), summary: out.summary });
-      return { report: out.summary };
+      const report = out.summary.length > 1_800 ? `${out.summary.slice(0, 1_800)}…` : out.summary;
+      shared.onAgentUpdate?.({ ...info, status: "done", finishedAt: Date.now(), summary: report });
+      return { report };
     } catch (error) {
       if ((error as { name?: string })?.name === "AbortError") throw error;
       const message = error instanceof Error ? error.message : String(error);
@@ -388,7 +410,8 @@ async function runLoop(p: LoopParams): Promise<AgentRunResult> {
     messages: messages.slice(1),
   });
 
-  let lastCompactCheck = -10;
+  let lastCompactIter = -COMPACT_COOLDOWN_ITERS;
+  let llmCompactions = 0;
   for (let iteration = 0; iteration < p.maxIterations; iteration++) {
     if (p.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
 
@@ -399,10 +422,18 @@ async function runLoop(p: LoopParams): Promise<AgentRunResult> {
       }
     }
 
-    if (p.compact && estimateTokens(messages) > p.compactAtTokens && messages.length > lastCompactCheck + 3) {
-      const compacted = await compactContext(p, messages, emit);
-      lastCompactCheck = compacted === messages ? messages.length : 0;
-      messages = compacted;
+    if (p.compact) {
+      messages = await maybeManageContext(p, messages, emit, {
+        iteration,
+        lastCompactIter,
+        llmCompactions,
+        setLastCompactIter: (value) => {
+          lastCompactIter = value;
+        },
+        bumpLlmCompactions: () => {
+          llmCompactions++;
+        },
+      });
     }
 
     await p.throttle.wait(p.signal, p.onStatus);
@@ -447,6 +478,25 @@ async function runLoop(p: LoopParams): Promise<AgentRunResult> {
     // Herramientas normales en orden; las especiales (delegar, explorar) en paralelo.
     for (const call of toolCalls.filter((c) => !specialNames.has(c.name))) {
       if (p.signal?.aborted) throw new DOMException("Agent aborted", "AbortError");
+      if (call.name === "recall_artifact") {
+        const recalled = p.artifacts.recall(
+          String(call.arguments.id ?? ""),
+          typeof call.arguments.offset === "number" ? call.arguments.offset : 0
+        );
+        const started = Date.now();
+        emit({
+          id: call.id,
+          type: "READ",
+          title: `Recuperando ${String(call.arguments.id ?? "artifact")}`,
+          detail: String(call.arguments.id ?? ""),
+          status: "success",
+          timestamp: started,
+          durationMs: Date.now() - started,
+          output: JSON.stringify(recalled).slice(0, 4000),
+        });
+        results.set(call.id, recalled);
+        continue;
+      }
       const mcpTool = p.mcpTools?.get(call.name);
       const { action, result: toolResult } = mcpTool
         ? await executeMcpTool(p.client, call, mcpTool)
@@ -490,13 +540,16 @@ async function runLoop(p: LoopParams): Promise<AgentRunResult> {
     );
 
     for (const call of toolCalls) {
+      const raw = results.get(call.id) ?? { error: "sin resultado" };
+      const content = encapsulateToolContent(p, call.name, raw);
       messages.push({
         role: "tool",
         tool_call_id: call.id,
         name: call.name,
-        content: limitForModel(JSON.stringify(results.get(call.id) ?? { error: "sin resultado" })),
+        content,
       });
     }
+    p.onArtifacts?.(p.artifacts.list());
     p.onMessages?.(messages.slice(1));
 
     if (needsConfirmation) {
@@ -512,26 +565,127 @@ async function runLoop(p: LoopParams): Promise<AgentRunResult> {
   );
 }
 
+interface CompactControl {
+  iteration: number;
+  lastCompactIter: number;
+  llmCompactions: number;
+  setLastCompactIter: (value: number) => void;
+  bumpLlmCompactions: () => void;
+}
+
+/**
+ * Gestiona el presupuesto de contexto: compactación LLM con cooldown/circuit
+ * breaker, y truncate mecánico si no baja lo suficiente o se supera el hard.
+ */
+async function maybeManageContext(
+  p: LoopParams,
+  messages: AgentMessage[],
+  emit: (action: AgentAction) => void,
+  ctrl: CompactControl
+): Promise<AgentMessage[]> {
+  let current = messages;
+  let tokens = estimateTokens(current);
+  const cooledDown = ctrl.iteration >= ctrl.lastCompactIter + COMPACT_COOLDOWN_ITERS;
+  const overSoft = tokens > p.compactAtTokens;
+
+  if (overSoft && cooledDown) {
+    let reduced = false;
+    if (ctrl.llmCompactions < MAX_LLM_COMPACTIONS_PER_RUN) {
+      const outcome = await compactContext(p, current, emit);
+      ctrl.bumpLlmCompactions();
+      ctrl.setLastCompactIter(ctrl.iteration);
+      if (outcome?.messages) {
+        current = outcome.messages;
+        reduced = Boolean(outcome.reduced);
+      }
+    } else {
+      ctrl.setLastCompactIter(ctrl.iteration);
+      emit({
+        id: `compact-breaker-${Date.now()}`,
+        type: "THINK",
+        title: "Circuit breaker de compactación",
+        detail: `Ya hubo ${MAX_LLM_COMPACTIONS_PER_RUN} compactaciones LLM en esta ejecución; se usa truncate mecánico.`,
+        status: "success",
+        timestamp: Date.now(),
+      });
+    }
+
+    if (!reduced) {
+      current = mechanicalTruncate(p, current, emit, "Compactación insuficiente o no aplicable");
+    }
+  }
+
+  tokens = estimateTokens(current);
+  if (tokens > p.hardTruncateAt) {
+    current = mechanicalTruncate(p, current, emit, "Presupuesto duro de contexto superado");
+  }
+
+  return current;
+}
+
+function mechanicalTruncate(
+  p: LoopParams,
+  messages: AgentMessage[],
+  emit: (action: AgentAction) => void,
+  reason: string
+): AgentMessage[] {
+  const before = estimateTokens(messages);
+  const { messages: next, stubbed } = truncateToolResultsMechanically(messages, {
+    keepRecentToolResults: 3,
+    stubMaxChars: 280,
+  });
+  let current = next;
+  let after = estimateTokens(current);
+
+  if (after > p.compactAtTokens) {
+    current = current.map((message) => {
+      if (message.role !== "assistant" || !message.content || message.content.length < 1_200) return message;
+      return { ...message, content: `${message.content.slice(0, 800)}…[recortado]` };
+    });
+    after = estimateTokens(current);
+  }
+
+  emit({
+    id: `truncate-${Date.now()}`,
+    type: "THINK",
+    title: "Truncate mecánico",
+    detail: `${reason}: ~${before} → ~${after} tokens (${stubbed} resultados stub).`,
+    status: "success",
+    timestamp: Date.now(),
+  });
+  return current;
+}
+
 async function compactContext(
   p: LoopParams,
   messages: AgentMessage[],
   emit: (action: AgentAction) => void
-): Promise<AgentMessage[]> {
+): Promise<{ messages: AgentMessage[]; summary?: string; reduced: boolean } | null> {
   const started = Date.now();
   const id = `compact-${started}`;
   const before = estimateTokens(messages);
   let announced = false;
   const compacted = await compactMessages(messages, {
-    keepTailTokens: Math.floor(p.compactAtTokens * 0.4),
+    keepTailTokens: Math.floor(p.compactAtTokens * KEEP_TAIL_FRACTION),
     summarize: async (system, text) => {
       announced = true;
-      emit({ id, type: "THINK", title: "Compactando el contexto", detail: `~${before} tokens: se resume lo antiguo y se guarda en context_agent.md`, status: "running", timestamp: started });
+      emit({
+        id,
+        type: "THINK",
+        title: "Compactando el contexto",
+        detail: `~${before} tokens: se resume lo antiguo y se inyecta en Memoria de trabajo`,
+        status: "running",
+        timestamp: started,
+      });
       await p.throttle.wait(p.signal, p.onStatus);
       const response = await callNimWithTools({
         apiKey: p.apiKey,
         model: p.model,
         params: { ...p.params, maxTokens: Math.min(p.params.maxTokens, 1200) },
-        messages: [{ role: "system", content: system }, { role: "user", content: text }],
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: text },
+        ],
         tools: [],
         signal: p.signal,
         onStatus: p.onStatus,
@@ -540,21 +694,40 @@ async function compactContext(
     },
   });
   if (!compacted) {
-    if (announced) emit({ id, type: "THINK", title: "Compactando el contexto", detail: "Nada que compactar todavía", status: "success", timestamp: started });
-    return messages;
+    if (announced) {
+      emit({
+        id,
+        type: "THINK",
+        title: "Compactando el contexto",
+        detail: "Nada que compactar con el summarizer; se usará truncate mecánico si hace falta",
+        status: "success",
+        timestamp: started,
+      });
+    }
+    return null;
   }
   await saveContextSummary(p.client, compacted.summary);
+  const after = estimateTokens(compacted.messages);
+  const reduced = compactionReducedEnough(before, after);
   emit({
     id,
     type: "THINK",
-    title: "Contexto compactado",
-    detail: `~${before} → ~${estimateTokens(compacted.messages)} tokens. Resumen guardado en context_agent.md`,
+    title: reduced ? "Contexto compactado" : "Compactación insuficiente",
+    detail: `~${before} → ~${after} tokens. ${reduced ? "Memoria inyectada en el system prompt y context_agent.md." : "Se aplicará truncate mecánico."}`,
     status: "success",
     timestamp: started,
     durationMs: Date.now() - started,
     output: compacted.summary,
   });
-  return compacted.messages;
+  return { messages: compacted.messages, summary: compacted.summary, reduced };
+}
+
+function encapsulateToolContent(p: Shared, tool: string, raw: unknown): string {
+  if (tool === "recall_artifact") {
+    return limitForModel(JSON.stringify(raw));
+  }
+  const wrapped = p.artifacts.encapsulate(tool, raw, toolResultMeta(tool, raw));
+  return limitForModel(wrapped.text);
 }
 
 async function executeMcpTool(client: NimChatServerClient, call: ToolCall, tool: McpAgentTool) {
@@ -672,24 +845,43 @@ export async function compactTranscriptNow(options: {
   signal?: AbortSignal;
 }): Promise<{ messages: AgentMessage[]; summary: string } | null> {
   const client = new NimChatServerClient(options.serverUrl);
+  const softAt = getSoftCompactAt(options.model, options.params.maxTokens);
   const compacted = await compactMessages([{ role: "system", content: "" }, ...options.transcript], {
-    keepTailTokens: 3000,
+    keepTailTokens: Math.floor(softAt * KEEP_TAIL_FRACTION),
     summarize: async (system, text) => {
       const response = await callNimWithTools({
         apiKey: options.apiKey,
         model: options.model,
         params: { ...options.params, maxTokens: Math.min(options.params.maxTokens, 1200) },
-        messages: [{ role: "system", content: system }, { role: "user", content: text }],
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: text },
+        ],
         tools: [],
         signal: options.signal,
       });
       return response.choices?.[0]?.message?.content ?? "";
     },
   });
-  if (!compacted) return null;
+  if (!compacted) {
+    const { messages: stubbed } = truncateToolResultsMechanically(
+      [{ role: "system", content: "" }, ...options.transcript],
+      { keepRecentToolResults: 3 }
+    );
+    if (stubbed.length <= options.transcript.length) {
+      return {
+        messages: stubbed.slice(1),
+        summary: "Truncate mecánico de resultados antiguos (sin resumen LLM).",
+      };
+    }
+    return null;
+  }
   await saveContextSummary(client, compacted.summary);
   return { messages: compacted.messages.slice(1), summary: compacted.summary };
 }
+
+export { getSoftCompactAt, getHardTruncateAt } from "./model-context";
+export type { ArtifactMeta } from "./artifact-store";
 
 /** Tokens aproximados de una conversación guardada. */
 export const transcriptTokens = (messages: AgentMessage[]) => estimateTokens(messages);

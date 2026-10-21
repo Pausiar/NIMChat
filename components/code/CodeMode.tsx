@@ -13,7 +13,13 @@ import {
   type ReadFileResult,
   type TerminalEvent,
 } from "@/lib/server-client";
-import { DEFAULT_COMPACT_AT, compactTranscriptNow, runAgentLoop, transcriptTokens } from "@/lib/agent-loop";
+import {
+  compactTranscriptNow,
+  getSoftCompactAt,
+  runAgentLoop,
+  transcriptTokens,
+  type ArtifactMeta,
+} from "@/lib/agent-loop";
 import { wantsAgents, type AgentInfo, type AgentMessageEvent } from "@/lib/agents";
 import {
   deleteTranscript,
@@ -76,6 +82,7 @@ export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModePr
   const [runningId, setRunningId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [contextTokens, setContextTokens] = useState(0);
+  const [artifacts, setArtifacts] = useState<ArtifactMeta[]>([]);
   const [compacting, setCompacting] = useState(false);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [connectedConnectors, setConnectedConnectors] = useState(0);
@@ -100,6 +107,8 @@ export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModePr
 
   const activeSession = useMemo(() => sessions.find((s) => s.id === activeSessionId) ?? null, [sessions, activeSessionId]);
   const running = runningId !== null;
+  const codeMaxTokens = resolveMaxTokens({ settings, mode: "code" });
+  const compactAt = getSoftCompactAt(settings.selectedModel, codeMaxTokens);
 
   // ---------- Proyecto ----------
 
@@ -493,6 +502,7 @@ export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModePr
     setRunningId(id);
     setStatus(null);
     setError(null);
+    setArtifacts([]);
     setInput("");
     updateSession(id, (s) => ({
       ...s,
@@ -509,14 +519,16 @@ export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModePr
         resume: transcriptRef.current.length > 0 ? transcriptRef.current : undefined,
         apiKey: settings.apiKey,
         model: settings.selectedModel,
-        params: { ...settings.params, maxTokens: resolveMaxTokens({ settings, mode: "code" }) },
+        params: { ...settings.params, maxTokens: codeMaxTokens },
         serverUrl: DEFAULT_LOCAL_SERVER_URL,
         maxIterations: settings.agentMaxIterations,
         requestDelayMs: Math.max(0, settings.requestDelaySeconds) * 1000,
+        compactAtTokens: compactAt,
         signal: controller.signal,
         onAction: (action) =>
           updateSession(id, (s) => ({ ...s, feed: upsertAction(s.feed, action), updatedAt: Date.now() })),
         onStatus: setStatus,
+        onArtifacts: setArtifacts,
         onMessages: (messages) => {
           transcriptRef.current = messages;
           saveTranscript(id, messages);
@@ -749,7 +761,8 @@ export function CodeMode({ settings, onOpenSettings, onModelChange }: CodeModePr
             agentMessages={activeSession?.agentMessages ?? []}
             running={running}
             contextTokens={contextTokens}
-            compactAt={DEFAULT_COMPACT_AT}
+            compactAt={compactAt}
+            artifacts={artifacts}
             compacting={compacting}
             onCompact={() => void compactNow()}
             onOpenContextFile={() => void openFile("context_agent.md")}

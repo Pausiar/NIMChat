@@ -19,12 +19,13 @@ export function estimateTokens(messages: AgentMessage[]): number {
   return Math.ceil(chars / 3.5);
 }
 
-const MODEL_RESULT_LIMIT = 12000;
+/** Tope de lo que el modelo ve de una herramienta cuando va inline. */
+export const MODEL_RESULT_LIMIT = 4_000;
 
 /** Lo que el modelo ve de una herramienta: se recorta para no llenar el contexto. */
 export function limitForModel(text: string, max = MODEL_RESULT_LIMIT): string {
   return text.length > max
-    ? `${text.slice(0, max)}\n...[recortado: lee solo la parte que necesites con search_in_files o read_file]`
+    ? `${text.slice(0, max)}\n...[recortado: usa search_in_files, read_file por rangos o recall_artifact]`
     : text;
 }
 
@@ -87,6 +88,8 @@ export interface CompactionDeps {
   keepTailTokens: number;
 }
 
+const MEMORY_HEADER = "# Memoria de trabajo (inyectada — no relean context_agent.md ahora)";
+
 /**
  * Sustituye lo antiguo por un resumen. Conserva el prompt de sistema, el primer
  * mensaje y la cola reciente (sin dejar nunca un resultado de herramienta huérfano).
@@ -121,9 +124,72 @@ export async function compactMessages(
 
   const note: AgentMessage = {
     role: "user",
-    content: `Resumen del contexto anterior (compactado automáticamente para liberar espacio):\n${summary}\n\nContinúa la tarea a partir de aquí. Si necesitas detalles, consulta context_agent.md.`,
+    content:
+      `Resumen del contexto anterior (compactado):\n${summary}\n\n` +
+      `El estado actual está en el system prompt bajo «Memoria de trabajo». ` +
+      `Continúa la tarea. NO empieces por leer context_agent.md ni por reexplorar el proyecto entero; ` +
+      `usa search_in_files o read_file solo sobre rutas concretas que necesites.`,
   };
-  return { messages: [...messages.slice(0, 2), note, ...messages.slice(start)], summary };
+  const next = applyMemoryToSystem([...messages.slice(0, 2), note, ...messages.slice(start)], summary);
+  return { messages: next, summary };
+}
+
+/** Inyecta o sustituye el bloque de memoria en el mensaje de sistema. */
+export function applyMemoryToSystem(messages: AgentMessage[], summary: string): AgentMessage[] {
+  if (messages.length === 0) return messages;
+  const system = messages[0];
+  if (system.role !== "system") return messages;
+  const base = (system.content ?? "").replace(/\n\n# Memoria de trabajo[\s\S]*$/, "").trimEnd();
+  const block = `\n\n${MEMORY_HEADER}\n${summary.trim()}`;
+  return [{ ...system, content: `${base}${block}` }, ...messages.slice(1)];
+}
+
+/**
+ * Reduce el historial sin llamar al modelo: convierte resultados de tool antiguos
+ * en stubs cortos (con path/artifact_id si se pueden inferir).
+ */
+export function truncateToolResultsMechanically(
+  messages: AgentMessage[],
+  options?: { keepRecentToolResults?: number; stubMaxChars?: number }
+): { messages: AgentMessage[]; stubbed: number } {
+  const keepRecent = options?.keepRecentToolResults ?? 4;
+  const stubMax = options?.stubMaxChars ?? 280;
+  const toolIndexes: number[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    if (messages[i].role === "tool") toolIndexes.push(i);
+  }
+  if (toolIndexes.length <= keepRecent) {
+    return { messages, stubbed: 0 };
+  }
+
+  const stubSet = new Set(toolIndexes.slice(0, toolIndexes.length - keepRecent));
+  let stubbed = 0;
+  const next = messages.map((message, index) => {
+    if (!stubSet.has(index) || message.role !== "tool") return message;
+    const content = message.content ?? "";
+    if (content.length <= stubMax) return message;
+    stubbed++;
+    const pathMatch = content.match(/"path"\s*:\s*"([^"]+)"/);
+    const artMatch = content.match(/"artifact_id"\s*:\s*"(art-\d+)"/);
+    const path = pathMatch?.[1];
+    const artifactId = artMatch?.[1];
+    const stub = {
+      stubbed: true,
+      tool: message.name,
+      path,
+      artifact_id: artifactId,
+      note: "Resultado omitido para liberar contexto. Usa recall_artifact o read_file/search_in_files si lo necesitas.",
+      preview: content.slice(0, Math.min(160, stubMax)),
+    };
+    return { ...message, content: JSON.stringify(stub) };
+  });
+  return { messages: next, stubbed };
+}
+
+/** True si la compactación redujo al menos `minRatio` del tamaño original. */
+export function compactionReducedEnough(before: number, after: number, minRatio = 0.1): boolean {
+  if (before <= 0) return after < before;
+  return (before - after) / before >= minRatio;
 }
 
 const START = "<!-- nimchat:auto-summary:start -->";
