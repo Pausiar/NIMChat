@@ -121,6 +121,22 @@ export const CODE_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "recall_artifact",
+      description:
+        "Retrieve a previously stored tool result by artifact_id (large outputs are kept out of the chat). Optional offset for paging.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Artifact id such as art-1" },
+          offset: { type: "number", description: "Character offset into the stored body" },
+        },
+        required: ["id"],
+      },
+    },
+  },
 ] as const;
 
 export async function executeAgentTool(client: NimChatServerClient, call: ToolCall) {
@@ -159,6 +175,7 @@ function createAction(call: ToolCall): AgentAction {
     run_command: { type: "RUN", title: `Ejecutando ${command ?? "comando"}` },
     list_directory: { type: "READ", title: `Listando ${path ?? "directorio"}` },
     search_in_files: { type: "SEARCH", title: `Buscando ${String(args.query ?? "")}` },
+    recall_artifact: { type: "READ", title: `Recuperando ${String(args.id ?? "artifact")}` },
   };
   const meta = titleByTool[call.name] ?? { type: "THINK" as const, title: call.name };
   return {

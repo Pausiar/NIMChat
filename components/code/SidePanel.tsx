@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, FileText, Loader2, MessagesSquare, Minimize2, Network, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AgentInfo, AgentMessageEvent } from "@/lib/agents";
+import type { ArtifactMeta } from "@/lib/artifact-store";
 import { getModel } from "@/lib/models";
 import type { McpServerInfo, NimChatServerClient } from "@/lib/server-client";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,8 @@ interface SidePanelProps {
   /** Tokens aproximados de la conversación del agente y umbral de compactación. */
   contextTokens: number;
   compactAt: number;
+  /** Resultados grandes guardados fuera del prompt en la ejecución actual. */
+  artifacts: ArtifactMeta[];
   compacting: boolean;
   onCompact: () => void;
   onOpenContextFile: () => void;
@@ -123,6 +126,7 @@ function ContextTab({
   running,
   contextTokens,
   compactAt,
+  artifacts,
   compacting,
   onCompact,
   onOpenContextFile,
@@ -147,21 +151,21 @@ function ContextTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectKey, refreshSignal, running]);
 
-  const percent = Math.min(100, Math.round((contextTokens / compactAt) * 100));
+  const percent = Math.min(100, Math.round((contextTokens / Math.max(1, compactAt)) * 100));
 
   return (
     <div className="space-y-4 p-3">
       <section>
         <div className="ui-mono mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-white/30">
-          <span>conversación del agente</span>
+          <span>working set (L0)</span>
           <span className={percent >= 80 ? "text-nim-yellow" : undefined}>{percent}%</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
           <div className="h-full rounded-full bg-nim-yellow transition-all" style={{ width: `${percent}%` }} />
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">
-          ~{contextTokens.toLocaleString("es-ES")} tokens. Al superar ~{compactAt.toLocaleString("es-ES")} el agente resume lo antiguo
-          y lo guarda en <span className="ui-mono">context_agent.md</span>.
+          ~{contextTokens.toLocaleString("es-ES")} / ~{compactAt.toLocaleString("es-ES")} tokens (umbral blando del modelo).
+          Al superarlo se compacta con cooldown; si no baja, truncate mecánico. El resumen se inyecta en el system prompt.
         </p>
         <Button size="sm" variant="outline" className="mt-2 w-full" onClick={onCompact} disabled={running || compacting || contextTokens < 1500}>
           {compacting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Minimize2 className="h-3 w-3" />}
@@ -171,14 +175,14 @@ function ContextTab({
 
       <section>
         <div className="ui-mono mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-white/30">
-          <span>context_agent.md</span>
+          <span>memoria L1 · context_agent.md</span>
           <button type="button" onClick={() => void load()} aria-label="Actualizar" className="text-white/40 hover:text-white">
             <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
           </button>
         </div>
         {file ? (
           <>
-            <pre className="ui-mono max-h-[46vh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-black/30 p-2.5 text-[11px] leading-relaxed text-white/65">
+            <pre className="ui-mono max-h-[32vh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-black/30 p-2.5 text-[11px] leading-relaxed text-white/65">
               {file.content}
             </pre>
             <Button size="sm" variant="ghost" className="mt-1.5" onClick={onOpenContextFile}>
@@ -191,6 +195,34 @@ function ContextTab({
             Todavía no existe. El agente lo crea al trabajar en el proyecto y ahí anota la estructura, lo hecho y lo pendiente
             para poder continuar sin releerlo todo.
           </p>
+        )}
+      </section>
+
+      <section>
+        <div className="ui-mono mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-white/30">
+          <span>artifacts L2</span>
+          <span>{artifacts.length}</span>
+        </div>
+        {artifacts.length === 0 ? (
+          <p className="text-[11px] leading-relaxed text-white/35">
+            Los resultados grandes de herramientas se guardan aquí durante la ejecución. El chat solo ve un preview; el agente
+            puede recuperarlos con <span className="ui-mono">recall_artifact</span>.
+          </p>
+        ) : (
+          <ul className="max-h-[28vh] space-y-1.5 overflow-auto">
+            {artifacts.map((artifact) => (
+              <li key={artifact.id} className="rounded-md border border-border px-2 py-1.5 text-[11px]">
+                <div className="ui-mono flex items-center justify-between gap-2 text-[10px] text-white/45">
+                  <span className="truncate text-nim-yellow">{artifact.id}</span>
+                  <span>{artifact.bytes.toLocaleString("es-ES")} B</span>
+                </div>
+                <div className="mt-0.5 truncate text-white/70">
+                  {artifact.tool}
+                  {artifact.path ? ` · ${artifact.path}` : ""}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>
